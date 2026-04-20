@@ -4,7 +4,7 @@ A web-based survey platform for companies to collect structured feedback about t
 
 ## Features
 
-### Week 1 + 2 (Done ✅)
+###  (Done ✅)
 - **User Authentication**: Registration, Login, Logout, Password Change
 - **Role-based Access**: Company and Customer roles
 - **Company Features**: 
