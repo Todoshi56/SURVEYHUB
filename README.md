@@ -110,12 +110,6 @@ surveyhub/
 3. Add a product
 4. Create a survey with multiple question types
 5. Edit and delete as needed
-
-## Next Phases
-
-**Week 3**: Customer survey submission & response tracking
-**Week 4**: Analytics dashboard with charts & CSV export
-
 ## License
 
 CSE470 Course Project
