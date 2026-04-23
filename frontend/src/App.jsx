@@ -13,6 +13,8 @@ import Surveys from './pages/Surveys';
 import CreateEditSurvey from './pages/CreateEditSurvey';
 import SurveysBrowse from './pages/SurveysBrowse';
 import SurveyDetail from './pages/SurveyDetail';
+import ThankYou from './pages/ThankYou';
+import ViewResponse from './pages/ViewResponse';
 
 function App() {
   return (
@@ -61,6 +63,12 @@ function App() {
             } />
             <Route path="/survey/:id" element={
               <ProtectedRoute><SurveyDetail /></ProtectedRoute>
+            } />
+            <Route path="/thank-you" element={
+              <ProtectedRoute><ThankYou /></ProtectedRoute>
+            } />
+            <Route path="/response/:surveyId" element={
+              <ProtectedRoute><ViewResponse /></ProtectedRoute>
             } />
           </Routes>
         </div>

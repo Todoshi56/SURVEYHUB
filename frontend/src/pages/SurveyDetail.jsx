@@ -67,8 +67,7 @@ export default function SurveyDetail() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      alert('Survey submitted successfully!');
-      navigate('/surveys');
+      navigate('/thank-you', { state: { surveyId: id } });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit survey');
     } finally {

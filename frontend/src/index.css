@@ -976,3 +976,111 @@ form:disabled {
   opacity: 0.6;
   pointer-events: none;
 }
+
+/* ─── Thank You Page ──────────────────────────────── */
+.thank-you-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 62px);
+}
+
+.thank-you-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3rem 2rem;
+  text-align: center;
+  max-width: 500px;
+  box-shadow: var(--shadow-md);
+}
+
+.thank-you-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  color: var(--success);
+}
+
+.thank-you-card h1 {
+  font-size: 2rem;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.thank-you-message {
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.thank-you-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.thank-you-actions .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ─── View Response ───────────────────────────────── */
+.response-view {
+  max-width: 700px;
+}
+
+.response-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.response-header h1 {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.response-meta {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.response-content {
+  margin-bottom: 2rem;
+}
+
+.response-item {
+  margin-bottom: 1.75rem;
+  padding: 1.25rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.response-question {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+}
+
+.response-answer {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  padding: 0.75rem;
+  background: var(--bg);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--primary);
+}
+
+.response-answer p {
+  margin: 0.25rem 0;
+}
+
+.response-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
