@@ -70,7 +70,7 @@ const checkUserSubmission = async (req, res) => {
     });
 
     res.json({
-      alreadySubmitted: !!response,
+      hasSubmitted: !!response,
       response: response || null
     });
   } catch (error) {

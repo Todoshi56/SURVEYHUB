@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { getSurveys, getSurveyById, createSurvey, updateSurvey, deleteSurvey } = require('../controllers/surveyController');
+const { getSurveys, getActiveSurveys, getSurveyById, createSurvey, updateSurvey, deleteSurvey } = require('../controllers/surveyController');
 const { protect, companyOnly } = require('../middleware/authMiddleware');
 
+router.get('/browse/active', protect, getActiveSurveys);
 router.get('/', protect, companyOnly, getSurveys);
 router.get('/:id', protect, getSurveyById);
 router.post('/', protect, companyOnly, createSurvey);

@@ -21,8 +21,11 @@ const Navbar = () => {
             <>
               <Link to="/company/profile">Profile</Link>
               <Link to="/company/products">Products</Link>
-              <Link to="/company/surveys">Surveys</Link>
+              <Link to="/company/surveys">My Surveys</Link>
             </>
+          )}
+          {user.role !== 'company' && (
+            <Link to="/surveys">Surveys</Link>
           )}
           <Link to="/change-password">Change Password</Link>
           <span className="navbar-user">Hi, {user.name}</span>

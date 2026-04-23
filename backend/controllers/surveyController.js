@@ -18,6 +18,18 @@ const getSurveys = async (req, res) => {
   }
 };
 
+const getActiveSurveys = async (req, res) => {
+  try {
+    const surveys = await Survey.find({ isActive: true })
+      .populate('company', 'name')
+      .populate('product', 'name')
+      .sort({ createdAt: -1 });
+    res.json(surveys);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getSurveyById = async (req, res) => {
   try {
     const survey = await Survey.findById(req.params.id).populate('product', 'name');
@@ -78,4 +90,4 @@ const deleteSurvey = async (req, res) => {
   }
 };
 
-module.exports = { getSurveys, getSurveyById, createSurvey, updateSurvey, deleteSurvey };
+module.exports = { getSurveys, getActiveSurveys, getSurveyById, createSurvey, updateSurvey, deleteSurvey };
