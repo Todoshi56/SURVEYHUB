@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 const emptyQuestion = () => ({
   questionText: '',
   questionType: 'text',
-  options: ['', ''],
+  options: ['', '', '', ''],
   required: true
 });
 
@@ -47,7 +47,15 @@ const CreateEditSurvey = () => {
             productId: data.product?._id || data.product,
             questions: data.questions.map((q) => ({
               ...q,
-              options: q.options?.length ? q.options : ['', '']
+              options:
+                q.questionType === 'mcq'
+                  ? [
+                      q.options?.[0] || '',
+                      q.options?.[1] || '',
+                      q.options?.[2] || '',
+                      q.options?.[3] || ''
+                    ]
+                  : []
             }))
           });
         } catch (err) {
@@ -67,9 +75,17 @@ const CreateEditSurvey = () => {
   };
 
   const updateQuestion = (index, field, value) => {
-    const updated = form.questions.map((q, i) =>
-      i === index ? { ...q, [field]: value } : q
-    );
+    const updated = form.questions.map((q, i) => {
+      if (i !== index) return q;
+      if (field === 'questionType') {
+        return {
+          ...q,
+          questionType: value,
+          options: value === 'mcq' ? ['', '', '', ''] : []
+        };
+      }
+      return { ...q, [field]: value };
+    });
     setForm({ ...form, questions: updated });
   };
 
@@ -100,17 +116,24 @@ const CreateEditSurvey = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
     if (form.questions.length === 0) {
       return setError('Please add at least one question.');
     }
+
+    const formattedQuestions = form.questions.map((q) => {
+      if (q.questionType === 'mcq') {
+        const options = q.options.slice(0, 4).map((opt) => opt.trim());
+        if (options.length !== 4 || options.some((opt) => !opt)) {
+          throw new Error('Each MCQ question must have exactly 4 non-empty options.');
+        }
+        return { ...q, options };
+      }
+      return { ...q, options: [] };
+    });
+
     try {
-      const payload = {
-        ...form,
-        questions: form.questions.map((q) => ({
-          ...q,
-          options: q.questionType === 'mcq' ? q.options.filter((o) => o.trim()) : []
-        }))
-      };
+      const payload = { ...form, questions: formattedQuestions };
       if (isEditing) {
         await axios.put(`/api/surveys/${id}`, payload, {
           headers: { Authorization: `Bearer ${user.token}` }
@@ -122,7 +145,7 @@ const CreateEditSurvey = () => {
       }
       navigate('/company/surveys');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save survey.');
+      setError(err.response?.data?.message || err.message || 'Failed to save survey.');
     }
   };
 
@@ -229,8 +252,8 @@ const CreateEditSurvey = () => {
               {/* MCQ Options */}
               {q.questionType === 'mcq' && (
                 <div className="options-section">
-                  <label>Answer Options</label>
-                  {q.options.map((opt, oIndex) => (
+                  <label>Answer Options (4 required)</label>
+                  {q.options.slice(0, 4).map((opt, oIndex) => (
                     <div key={oIndex} className="option-row">
                       <span className="option-label">{String.fromCharCode(65 + oIndex)}.</span>
                       <input
@@ -238,25 +261,10 @@ const CreateEditSurvey = () => {
                         value={opt}
                         onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
                         placeholder={`Option ${oIndex + 1}`}
+                        required
                       />
-                      {q.options.length > 2 && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-danger"
-                          onClick={() => removeOption(qIndex, oIndex)}
-                        >
-                          ✕
-                        </button>
-                      )}
                     </div>
                   ))}
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-secondary"
-                    onClick={() => addOption(qIndex)}
-                  >
-                    + Add Option
-                  </button>
                 </div>
               )}
 
