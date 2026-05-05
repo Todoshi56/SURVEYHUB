@@ -22,7 +22,7 @@ const Surveys = () => {
   useEffect(() => { fetchSurveys(); }, []);
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this survey?')) return;
+    if (!window.confirm(`⚠️ Delete Survey?\n\nSurvey: "${surveys.find(s => s._id === id)?.title}"\n\nThis action is permanent and cannot be undone.`)) return;
     try {
       await axios.delete(`/api/surveys/${id}`, {
         headers: { Authorization: `Bearer ${user.token}` }
@@ -46,6 +46,9 @@ const Surveys = () => {
           <div className="empty-icon">📋</div>
           <h3>No Surveys Yet</h3>
           <p>Create your first survey to start collecting customer feedback.</p>
+          <p style={{fontSize:'0.85rem', color:'#aaa'}}>
+            Surveys let you collect MCQ, rating, and text feedback from customers.
+          </p>
           <Link to="/company/surveys/create" className="btn btn-primary">Create Survey</Link>
         </div>
       ) : (
@@ -60,10 +63,15 @@ const Surveys = () => {
               </div>
               <p className="survey-product">Product: {s.product?.name || 'N/A'}</p>
               {s.description && <p className="survey-desc">{s.description}</p>}
-              <p className="survey-questions">{s.questions?.length || 0} question(s)</p>
+              <p className="survey-questions">
+                {s.questions?.length || 0} question(s) — 
+                ☑️ {s.questions?.filter(q => q.questionType === 'mcq').length || 0} MCQ, 
+                ⭐ {s.questions?.filter(q => q.questionType === 'rating').length || 0} Rating, 
+                📝 {s.questions?.filter(q => q.questionType === 'text').length || 0} Text
+              </p>
               <div className="survey-actions">
-                <Link to={`/company/surveys/edit/${s._id}`} className="btn btn-sm btn-secondary">Edit</Link>
-                <button onClick={() => handleDelete(s._id)} className="btn btn-sm btn-danger">Delete</button>
+                <Link to={`/company/surveys/edit/${s._id}`} className="btn btn-sm btn-secondary">✏️ Edit Survey</Link>
+                <button onClick={() => handleDelete(s._id)} className="btn btn-sm btn-danger">🗑️ Delete</button>
               </div>
             </div>
           ))}
