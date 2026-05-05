@@ -64,6 +64,21 @@ const normalizeQuestions = (questions = []) => {
 
 const createSurvey = async (req, res) => {
   const { title, description, productId, questions } = req.body;
+  if (!questions || questions.length === 0) {
+    return res.status(400).json({ 
+      message: 'Please add at least one question before creating the survey.' 
+    });
+  }
+  for (const q of questions) {
+    if (q.questionType === 'mcq') {
+      const validOptions = (q.options || []).filter(o => o.trim() !== '');
+      if (validOptions.length < 2) {
+        return res.status(400).json({ 
+          message: 'Multiple choice questions must have at least 2 options.' 
+        });
+      }
+    }
+  }
   try {
     const company = await getCompanyByUser(req.user._id);
     if (!company) return res.status(404).json({ message: 'Please create a company profile first.' });
