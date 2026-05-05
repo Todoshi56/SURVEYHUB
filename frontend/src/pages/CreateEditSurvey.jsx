@@ -243,10 +243,15 @@ const CreateEditSurvey = () => {
                   value={q.questionType}
                   onChange={(e) => updateQuestion(qIndex, 'questionType', e.target.value)}
                 >
-                  <option value="text">Short Text Answer</option>
-                  <option value="rating">Rating Scale (1–5)</option>
-                  <option value="mcq">Multiple Choice (MCQ)</option>
+                  <option value="text">📝 Short Text Answer</option>
+                  <option value="rating">⭐ Rating Scale (1–5)</option>
+                  <option value="mcq">☑️ Multiple Choice (MCQ)</option>
                 </select>
+                <p style={{ fontSize: '0.8rem', color: '#888', marginTop: '4px' }}>
+                  {q.questionType === 'text' && 'Customer will type a short written answer.'}
+                  {q.questionType === 'rating' && 'Customer picks a number from 1 (poor) to 5 (excellent).'}
+                  {q.questionType === 'mcq' && 'Customer selects one option from your choices below.'}
+                </p>
               </div>
 
               {/* MCQ Options */}
