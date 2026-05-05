@@ -179,6 +179,9 @@ const CreateEditSurvey = () => {
               placeholder="Brief description of what this survey is about"
               rows={2}
             />
+            <p style={{fontSize:'0.78rem', color:'#888', marginTop:'4px'}}>
+              💡 Tip: A clear description helps customers understand what the survey is about.
+            </p>
           </div>
           <div className="form-group">
             <label>Select Product <span className="required">*</span></label>
