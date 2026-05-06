@@ -1,15 +1,36 @@
 const Response = require('../models/Response');
 const Survey = require('../models/Survey');
+const Company = require('../models/Company');
+const SampleRequest = require('../models/SampleRequest');
 
-// Submit a survey response
+const getCompanyByUser = (userId) => Company.findOne({ user: userId });
+
 const submitResponse = async (req, res) => {
   const { surveyId, answers } = req.body;
   try {
-    // Check if survey exists
     const survey = await Survey.findById(surveyId);
     if (!survey) return res.status(404).json({ message: 'Survey not found.' });
 
-    // Check if user already submitted
+    if (req.user.role === 'company') {
+      const myCompany = await getCompanyByUser(req.user._id);
+      if (myCompany && survey.company.toString() === myCompany._id.toString()) {
+        return res.status(403).json({
+          message: "You can't submit a survey for a product owned by your own company."
+        });
+      }
+    }
+
+    const approvedSample = await SampleRequest.findOne({
+      requester: req.user._id,
+      product: survey.product,
+      status: 'approved'
+    });
+    if (!approvedSample) {
+      return res.status(403).json({
+        message: 'You can only take this survey after the company approves your sample request for this product.'
+      });
+    }
+
     const existingResponse = await Response.findOne({
       survey: surveyId,
       user: req.user._id
@@ -18,7 +39,6 @@ const submitResponse = async (req, res) => {
       return res.status(400).json({ message: 'You have already submitted this survey.' });
     }
 
-    // Save response
     const response = await Response.create({
       survey: surveyId,
       user: req.user._id,
@@ -34,15 +54,14 @@ const submitResponse = async (req, res) => {
   }
 };
 
-// Get all responses for a survey (company only)
 const getSurveyResponses = async (req, res) => {
   const { surveyId } = req.params;
   try {
     const survey = await Survey.findById(surveyId);
     if (!survey) return res.status(404).json({ message: 'Survey not found.' });
 
-    // Check if current user is the survey owner
-    if (survey.company.toString() !== req.user.company) {
+    const company = await getCompanyByUser(req.user._id);
+    if (!company || survey.company.toString() !== company._id.toString()) {
       return res.status(403).json({ message: 'Access denied.' });
     }
 
@@ -60,7 +79,6 @@ const getSurveyResponses = async (req, res) => {
   }
 };
 
-// Check if user already submitted a survey
 const checkUserSubmission = async (req, res) => {
   const { surveyId } = req.params;
   try {
@@ -78,7 +96,6 @@ const checkUserSubmission = async (req, res) => {
   }
 };
 
-// Get user's response for a survey
 const getUserResponse = async (req, res) => {
   const { surveyId } = req.params;
   try {
@@ -97,17 +114,20 @@ const getUserResponse = async (req, res) => {
   }
 };
 
-// Get analytics data for a survey (for Week 4)
 const getSurveyAnalytics = async (req, res) => {
   const { surveyId } = req.params;
   try {
     const survey = await Survey.findById(surveyId);
     if (!survey) return res.status(404).json({ message: 'Survey not found.' });
 
+    const company = await getCompanyByUser(req.user._id);
+    if (!company || survey.company.toString() !== company._id.toString()) {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
+
     const responses = await Response.find({ survey: surveyId });
     const totalResponses = responses.length;
 
-    // Calculate stats per question
     const analytics = survey.questions.map((q) => {
       const questionResponses = responses.map(r =>
         r.answers.find(a => a.questionId === q._id.toString())

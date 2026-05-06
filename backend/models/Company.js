@@ -5,7 +5,8 @@ const companySchema = new mongoose.Schema({
   companyName: { type: String, required: true },
   description: { type: String },
   industry: { type: String },
-  website: { type: String }
+  website: { type: String },
+  phone: { type: String }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Company', companySchema);

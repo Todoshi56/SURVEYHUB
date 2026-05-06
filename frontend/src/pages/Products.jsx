@@ -46,7 +46,6 @@ const Products = () => {
           <div className="empty-icon">📦</div>
           <h3>No Products Yet</h3>
           <p>Add your first product to start creating surveys for it.</p>
-          <Link to="/company/products/add" className="btn btn-primary">Add Product</Link>
         </div>
       ) : (
         <div className="table-container">
@@ -54,6 +53,7 @@ const Products = () => {
             <thead>
               <tr>
                 <th>#</th>
+                <th>Image</th>
                 <th>Product Name</th>
                 <th>Category</th>
                 <th>Description</th>
@@ -64,6 +64,13 @@ const Products = () => {
               {products.map((p, index) => (
                 <tr key={p._id}>
                   <td>{index + 1}</td>
+                  <td>
+                    {p.image ? (
+                      <img src={p.image} alt={p.name} className="product-thumb" />
+                    ) : (
+                      <div className="product-thumb product-thumb-empty">—</div>
+                    )}
+                  </td>
                   <td><strong>{p.name}</strong></td>
                   <td>{p.category || <span className="text-muted">—</span>}</td>
                   <td>{p.description || <span className="text-muted">—</span>}</td>

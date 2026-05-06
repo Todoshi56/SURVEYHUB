@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
 const Register = () => {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'customer' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', role: 'customer' });
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -46,6 +46,16 @@ const Register = () => {
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="Enter your email"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Phone Number <span className="required">*</span></label>
+            <input
+              type="tel"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              placeholder="Enter your phone number"
               required
             />
           </div>

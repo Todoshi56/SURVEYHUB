@@ -46,7 +46,6 @@ const Surveys = () => {
           <div className="empty-icon">📋</div>
           <h3>No Surveys Yet</h3>
           <p>Create your first survey to start collecting customer feedback.</p>
-          <Link to="/company/surveys/create" className="btn btn-primary">Create Survey</Link>
         </div>
       ) : (
         <div className="survey-list">
@@ -62,6 +61,7 @@ const Surveys = () => {
               {s.description && <p className="survey-desc">{s.description}</p>}
               <p className="survey-questions">{s.questions?.length || 0} question(s)</p>
               <div className="survey-actions">
+                <Link to={`/company/surveys/${s._id}/analytics`} className="btn btn-sm btn-primary">View Results</Link>
                 <Link to={`/company/surveys/edit/${s._id}`} className="btn btn-sm btn-secondary">Edit</Link>
                 <button onClick={() => handleDelete(s._id)} className="btn btn-sm btn-danger">Delete</button>
               </div>
