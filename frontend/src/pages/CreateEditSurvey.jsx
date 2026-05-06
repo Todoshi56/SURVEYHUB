@@ -168,8 +168,12 @@ const CreateEditSurvey = () => {
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="e.g. Product Satisfaction Survey"
+              maxLength={80}
               required
             />
+            <p style={{fontSize:'0.75rem', color:'#999', textAlign:'right', margin:'2px 0 0 0'}}>
+              {form.title.length}/80 characters
+            </p>
           </div>
           <div className="form-group">
             <label>Description</label>
@@ -212,7 +216,11 @@ const CreateEditSurvey = () => {
 
           {form.questions.length === 0 && (
             <div className="empty-state">
-              <p>No questions yet. Click <strong>"+ Add Question"</strong> to get started.</p>
+              <p>No questions added yet.</p>
+              <p style={{color:'#888', fontSize:'0.85rem'}}>
+                Click <strong>"+ Add Question"</strong> above to add:<br/>
+                ☑️ Multiple Choice &nbsp;|&nbsp; ⭐ Rating (1-5) &nbsp;|&nbsp; 📝 Short Text
+              </p>
             </div>
           )}
 
