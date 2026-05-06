@@ -3,11 +3,22 @@ const router = express.Router();
 const { getSurveys, getActiveSurveys, getSurveyById, createSurvey, updateSurvey, deleteSurvey } = require('../controllers/surveyController');
 const { protect, companyOnly } = require('../middleware/authMiddleware');
 
-router.get('/browse/active', getActiveSurveys);
+// GET all surveys for the logged-in company
 router.get('/', protect, companyOnly, getSurveys);
+
+// GET all active surveys (public - for customers to browse)
+router.get('/browse/active', getActiveSurveys);
+
+// GET a single survey by its ID
 router.get('/:id', getSurveyById);
+
+// POST - create a new survey (company only)
 router.post('/', protect, companyOnly, createSurvey);
+
+// PUT - update/edit an existing survey (company only)
 router.put('/:id', protect, companyOnly, updateSurvey);
+
+// DELETE - remove a survey permanently (company only)
 router.delete('/:id', protect, companyOnly, deleteSurvey);
 
 module.exports = router;
