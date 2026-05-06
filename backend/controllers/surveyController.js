@@ -106,6 +106,27 @@ const updateSurvey = async (req, res) => {
     const survey = await Survey.findOne({ _id: req.params.id, company: company._id });
     if (!survey) return res.status(404).json({ message: 'Survey not found.' });
 
+    if (!questions || questions.length === 0) {
+      return res.status(400).json({
+        message: 'Survey must have at least one question.'
+      });
+    }
+    for (const q of questions) {
+      if (!q.questionText || q.questionText.trim() === '') {
+        return res.status(400).json({
+          message: 'All questions must have question text.'
+        });
+      }
+      if (q.questionType === 'mcq') {
+        const validOptions = (q.options || []).filter(o => o.trim() !== '');
+        if (validOptions.length < 2) {
+          return res.status(400).json({
+            message: 'MCQ questions must have at least 2 options.'
+          });
+        }
+      }
+    }
+
     const normalizedQuestions = normalizeQuestions(questions);
 
     survey.title = title;
