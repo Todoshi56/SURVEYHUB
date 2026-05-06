@@ -22,7 +22,8 @@ const Surveys = () => {
   useEffect(() => { fetchSurveys(); }, []);
 
   const handleDelete = async (id) => {
-    if (!window.confirm(`⚠️ Delete Survey?\n\nSurvey: "${surveys.find(s => s._id === id)?.title}"\n\nThis action is permanent and cannot be undone.`)) return;
+    const surveyToDelete = surveys.find(s => s._id === id);
+    if (!window.confirm(`⚠️ DELETE SURVEY\n\nName: "${surveyToDelete?.title}"\n\nThis will permanently delete the survey and all its questions.\nThis action cannot be undone.`)) return;
     try {
       await axios.delete(`/api/surveys/${id}`, {
         headers: { Authorization: `Bearer ${user.token}` }
@@ -64,13 +65,13 @@ const Surveys = () => {
               <p className="survey-product">Product: {s.product?.name || 'N/A'}</p>
               {s.description && <p className="survey-desc">{s.description}</p>}
               <p className="survey-questions">
-                {s.questions?.length || 0} question(s) — 
-                ☑️ {s.questions?.filter(q => q.questionType === 'mcq').length || 0} MCQ, 
-                ⭐ {s.questions?.filter(q => q.questionType === 'rating').length || 0} Rating, 
+                Total: {s.questions?.length || 0} question(s) &nbsp;|&nbsp;
+                ☑️ {s.questions?.filter(q => q.questionType === 'mcq').length || 0} MCQ &nbsp;
+                ⭐ {s.questions?.filter(q => q.questionType === 'rating').length || 0} Rating &nbsp;
                 📝 {s.questions?.filter(q => q.questionType === 'text').length || 0} Text
               </p>
               <div className="survey-actions">
-                <Link to={`/company/surveys/edit/${s._id}`} className="btn btn-sm btn-secondary">✏️ Edit Survey</Link>
+                <Link to={`/company/surveys/edit/${s._id}`} className="btn btn-sm btn-secondary">✏️ Edit</Link>
                 <button onClick={() => handleDelete(s._id)} className="btn btn-sm btn-danger">🗑️ Delete</button>
               </div>
             </div>
