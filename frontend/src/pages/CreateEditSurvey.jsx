@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 const emptyQuestion = () => ({
   questionText: '',
   questionType: 'text',
-  options: ['', ''],
+  options: ['', '', '', ''],
   required: true
 });
 
@@ -47,7 +47,15 @@ const CreateEditSurvey = () => {
             productId: data.product?._id || data.product,
             questions: data.questions.map((q) => ({
               ...q,
-              options: q.options?.length ? q.options : ['', '']
+              options:
+                q.questionType === 'mcq'
+                  ? [
+                      q.options?.[0] || '',
+                      q.options?.[1] || '',
+                      q.options?.[2] || '',
+                      q.options?.[3] || ''
+                    ]
+                  : []
             }))
           });
         } catch (err) {
@@ -67,9 +75,17 @@ const CreateEditSurvey = () => {
   };
 
   const updateQuestion = (index, field, value) => {
-    const updated = form.questions.map((q, i) =>
-      i === index ? { ...q, [field]: value } : q
-    );
+    const updated = form.questions.map((q, i) => {
+      if (i !== index) return q;
+      if (field === 'questionType') {
+        return {
+          ...q,
+          questionType: value,
+          options: value === 'mcq' ? ['', '', '', ''] : []
+        };
+      }
+      return { ...q, [field]: value };
+    });
     setForm({ ...form, questions: updated });
   };
 
@@ -100,17 +116,24 @@ const CreateEditSurvey = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
     if (form.questions.length === 0) {
       return setError('Please add at least one question.');
     }
+
+    const formattedQuestions = form.questions.map((q) => {
+      if (q.questionType === 'mcq') {
+        const options = q.options.slice(0, 4).map((opt) => opt.trim());
+        if (options.length !== 4 || options.some((opt) => !opt)) {
+          throw new Error('Each MCQ question must have exactly 4 non-empty options.');
+        }
+        return { ...q, options };
+      }
+      return { ...q, options: [] };
+    });
+
     try {
-      const payload = {
-        ...form,
-        questions: form.questions.map((q) => ({
-          ...q,
-          options: q.questionType === 'mcq' ? q.options.filter((o) => o.trim()) : []
-        }))
-      };
+      const payload = { ...form, questions: formattedQuestions };
       if (isEditing) {
         await axios.put(`/api/surveys/${id}`, payload, {
           headers: { Authorization: `Bearer ${user.token}` }
@@ -122,7 +145,7 @@ const CreateEditSurvey = () => {
       }
       navigate('/company/surveys');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save survey.');
+      setError(err.response?.data?.message || err.message || 'Failed to save survey.');
     }
   };
 
@@ -145,8 +168,12 @@ const CreateEditSurvey = () => {
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="e.g. Product Satisfaction Survey"
+              maxLength={80}
               required
             />
+            <p style={{fontSize:'0.75rem', color:'#999', textAlign:'right', margin:'2px 0 0 0'}}>
+              {form.title.length}/80 characters
+            </p>
           </div>
           <div className="form-group">
             <label>Description</label>
@@ -156,6 +183,9 @@ const CreateEditSurvey = () => {
               placeholder="Brief description of what this survey is about"
               rows={2}
             />
+            <p style={{fontSize:'0.78rem', color:'#888', marginTop:'4px'}}>
+              💡 Tip: A clear description helps customers understand what the survey is about.
+            </p>
           </div>
           <div className="form-group">
             <label>Select Product <span className="required">*</span></label>
@@ -186,7 +216,11 @@ const CreateEditSurvey = () => {
 
           {form.questions.length === 0 && (
             <div className="empty-state">
-              <p>No questions yet. Click <strong>"+ Add Question"</strong> to get started.</p>
+              <p>No questions added yet.</p>
+              <p style={{color:'#888', fontSize:'0.85rem'}}>
+                Click <strong>"+ Add Question"</strong> above to add:<br/>
+                ☑️ Multiple Choice &nbsp;|&nbsp; ⭐ Rating (1-5) &nbsp;|&nbsp; 📝 Short Text
+              </p>
             </div>
           )}
 
@@ -220,43 +254,36 @@ const CreateEditSurvey = () => {
                   value={q.questionType}
                   onChange={(e) => updateQuestion(qIndex, 'questionType', e.target.value)}
                 >
-                  <option value="text">Short Text Answer</option>
-                  <option value="rating">Rating Scale (1–5)</option>
-                  <option value="mcq">Multiple Choice (MCQ)</option>
+                  <option value="text">📝 Short Text Answer</option>
+                  <option value="rating">⭐ Rating Scale (1–5)</option>
+                  <option value="mcq">☑️ Multiple Choice (MCQ)</option>
                 </select>
+                <p style={{ fontSize: '0.8rem', color: '#888', marginTop: '4px' }}>
+                  {q.questionType === 'text' && 'Customer will type a short written answer.'}
+                  {q.questionType === 'rating' && 'Customer picks a number from 1 (poor) to 5 (excellent).'}
+                  {q.questionType === 'mcq' && 'Customer selects one option from your choices below.'}
+                </p>
               </div>
 
               {/* MCQ Options */}
               {q.questionType === 'mcq' && (
                 <div className="options-section">
-                  <label>Answer Options</label>
-                  {q.options.map((opt, oIndex) => (
+                  <label>Answer Options (4 required)</label>
+                  {q.options.slice(0, 4).map((opt, oIndex) => (
                     <div key={oIndex} className="option-row">
                       <span className="option-label">{String.fromCharCode(65 + oIndex)}.</span>
                       <input
                         type="text"
                         value={opt}
                         onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
-                        placeholder={`Option ${oIndex + 1}`}
+                        placeholder={`Write option ${String.fromCharCode(65 + oIndex)} here...`}
+                        required
                       />
-                      {q.options.length > 2 && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-danger"
-                          onClick={() => removeOption(qIndex, oIndex)}
-                        >
-                          ✕
-                        </button>
-                      )}
                     </div>
                   ))}
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-secondary"
-                    onClick={() => addOption(qIndex)}
-                  >
-                    + Add Option
-                  </button>
+                  <p style={{fontSize:'0.78rem', color:'#888', marginTop:'6px'}}>
+                    💡 MCQ needs at least 2 options. Customer will pick one.
+                  </p>
                 </div>
               )}
 

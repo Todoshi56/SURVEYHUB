@@ -40,17 +40,57 @@ const getSurveyById = async (req, res) => {
   }
 };
 
+const normalizeQuestions = (questions = []) => {
+  return questions.map((q) => {
+    const normalized = {
+      questionText: q.questionText,
+      questionType: q.questionType,
+      required: q.required !== false
+    };
+
+    if (q.questionType === 'mcq') {
+      const options = Array.isArray(q.options) ? q.options.slice(0, 4).map((o) => String(o || '').trim()) : [];
+      if (options.length !== 4 || options.some((opt) => !opt)) {
+        throw new Error('Each MCQ question must have exactly 4 non-empty options.');
+      }
+      normalized.options = options;
+    } else {
+      normalized.options = [];
+    }
+
+    return normalized;
+  });
+};
+
 const createSurvey = async (req, res) => {
   const { title, description, productId, questions } = req.body;
+  if (!questions || questions.length === 0) {
+    return res.status(400).json({ 
+      message: 'Please add at least one question before creating the survey.' 
+    });
+  }
+  for (const q of questions) {
+    if (q.questionType === 'mcq') {
+      const validOptions = (q.options || []).filter(o => o.trim() !== '');
+      if (validOptions.length < 2) {
+        return res.status(400).json({ 
+          message: 'Multiple choice questions must have at least 2 options.' 
+        });
+      }
+    }
+  }
   try {
     const company = await getCompanyByUser(req.user._id);
     if (!company) return res.status(404).json({ message: 'Please create a company profile first.' });
+
+    const normalizedQuestions = normalizeQuestions(questions);
+
     const survey = await Survey.create({
       company: company._id,
       product: productId,
       title,
       description,
-      questions
+      questions: normalizedQuestions
     });
     res.status(201).json(survey);
   } catch (error) {
@@ -65,10 +105,34 @@ const updateSurvey = async (req, res) => {
     if (!company) return res.status(404).json({ message: 'Company profile not found.' });
     const survey = await Survey.findOne({ _id: req.params.id, company: company._id });
     if (!survey) return res.status(404).json({ message: 'Survey not found.' });
+
+    if (!questions || questions.length === 0) {
+      return res.status(400).json({
+        message: 'Survey must have at least one question.'
+      });
+    }
+    for (const q of questions) {
+      if (!q.questionText || q.questionText.trim() === '') {
+        return res.status(400).json({
+          message: 'All questions must have question text.'
+        });
+      }
+      if (q.questionType === 'mcq') {
+        const validOptions = (q.options || []).filter(o => o.trim() !== '');
+        if (validOptions.length < 2) {
+          return res.status(400).json({
+            message: 'MCQ questions must have at least 2 options.'
+          });
+        }
+      }
+    }
+
+    const normalizedQuestions = normalizeQuestions(questions);
+
     survey.title = title;
     survey.description = description;
     survey.product = productId;
-    survey.questions = questions;
+    survey.questions = normalizedQuestions;
     if (isActive !== undefined) survey.isActive = isActive;
     await survey.save();
     res.json(survey);
