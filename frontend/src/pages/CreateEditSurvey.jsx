@@ -276,11 +276,14 @@ const CreateEditSurvey = () => {
                         type="text"
                         value={opt}
                         onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
-                        placeholder={`Option ${oIndex + 1}`}
+                        placeholder={`Write option ${String.fromCharCode(65 + oIndex)} here...`}
                         required
                       />
                     </div>
                   ))}
+                  <p style={{fontSize:'0.78rem', color:'#888', marginTop:'6px'}}>
+                    💡 MCQ needs at least 2 options. Customer will pick one.
+                  </p>
                 </div>
               )}
 
