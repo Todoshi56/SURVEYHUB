@@ -31,7 +31,7 @@ const getProducts = async (req, res) => {
 const browseProducts = async (req, res) => {
   try {
     const products = await Product.find()
-      .populate('company', 'companyName user')
+      .populate('company', 'companyName user movementRatingAverage movementRatingCount')
       .sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
