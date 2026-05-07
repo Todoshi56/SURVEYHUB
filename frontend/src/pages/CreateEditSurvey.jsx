@@ -24,123 +24,148 @@ const CreateEditSurvey = () => {
   const { id } = useParams();
   const isEditing = Boolean(id);
 
+  const getAuthHeaders = () => ({ Authorization: `Bearer ${user?.token}` });
+
+  const updateFormField = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const mapSurveyToForm = (survey) => ({
+    title: survey.title || '',
+    description: survey.description || '',
+    productId: survey.product?._id || survey.product || '',
+    questions: survey.questions?.map((q) => ({
+      ...q,
+      options:
+        q.questionType === 'mcq'
+          ? [q.options?.[0] || '', q.options?.[1] || '', q.options?.[2] || '', q.options?.[3] || '']
+          : []
+    })) || []
+  });
+
   useEffect(() => {
+    if (!user?.token) return;
+
     const fetchProducts = async () => {
       try {
         const { data } = await axios.get('/api/products', {
-          headers: { Authorization: `Bearer ${user.token}` }
+          headers: getAuthHeaders()
         });
         setProducts(data);
-      } catch (err) {}
+      } catch (err) {
+        console.error('Failed to load products', err);
+      }
     };
-    fetchProducts();
 
-    if (isEditing) {
-      const fetchSurvey = async () => {
-        try {
-          const { data } = await axios.get(`/api/surveys/${id}`, {
-            headers: { Authorization: `Bearer ${user.token}` }
-          });
-          setForm({
-            title: data.title,
-            description: data.description || '',
-            productId: data.product?._id || data.product,
-            questions: data.questions.map((q) => ({
-              ...q,
-              options:
-                q.questionType === 'mcq'
-                  ? [
-                      q.options?.[0] || '',
-                      q.options?.[1] || '',
-                      q.options?.[2] || '',
-                      q.options?.[3] || ''
-                    ]
-                  : []
-            }))
-          });
-        } catch (err) {
-          setError('Failed to load survey.');
+    const fetchSurvey = async () => {
+      try {
+        const { data } = await axios.get(`/api/surveys/${id}`, {
+          headers: getAuthHeaders()
+        });
+        setForm(mapSurveyToForm(data));
+      } catch (err) {
+        setError('Failed to load survey.');
+      }
+    };
+
+    fetchProducts();
+    if (isEditing) fetchSurvey();
+  }, [id, isEditing, user]);
+
+  const updateQuestion = (index, field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      questions: prev.questions.map((question, i) => {
+        if (i !== index) return question;
+        if (field === 'questionType') {
+          return {
+            ...question,
+            questionType: value,
+            options: value === 'mcq' ? ['', '', '', ''] : []
+          };
         }
-      };
-      fetchSurvey();
-    }
-  }, [id]);
+        return { ...question, [field]: value };
+      })
+    }));
+  };
 
   const addQuestion = () => {
-    setForm({ ...form, questions: [...form.questions, emptyQuestion()] });
+    setForm((prev) => ({ ...prev, questions: [...prev.questions, emptyQuestion()] }));
   };
 
   const removeQuestion = (index) => {
-    setForm({ ...form, questions: form.questions.filter((_, i) => i !== index) });
-  };
-
-  const updateQuestion = (index, field, value) => {
-    const updated = form.questions.map((q, i) => {
-      if (i !== index) return q;
-      if (field === 'questionType') {
-        return {
-          ...q,
-          questionType: value,
-          options: value === 'mcq' ? ['', '', '', ''] : []
-        };
-      }
-      return { ...q, [field]: value };
-    });
-    setForm({ ...form, questions: updated });
+    setForm((prev) => ({
+      ...prev,
+      questions: prev.questions.filter((_, i) => i !== index)
+    }));
   };
 
   const addOption = (qIndex) => {
-    const updated = form.questions.map((q, i) =>
-      i === qIndex ? { ...q, options: [...q.options, ''] } : q
-    );
-    setForm({ ...form, questions: updated });
+    setForm((prev) => ({
+      ...prev,
+      questions: prev.questions.map((question, i) =>
+        i === qIndex ? { ...question, options: [...question.options, ''] } : question
+      )
+    }));
   };
 
   const updateOption = (qIndex, oIndex, value) => {
-    const updated = form.questions.map((q, i) => {
-      if (i !== qIndex) return q;
-      const newOptions = q.options.map((opt, oi) => (oi === oIndex ? value : opt));
-      return { ...q, options: newOptions };
-    });
-    setForm({ ...form, questions: updated });
+    setForm((prev) => ({
+      ...prev,
+      questions: prev.questions.map((question, i) => {
+        if (i !== qIndex) return question;
+        return {
+          ...question,
+          options: question.options.map((opt, oi) => (oi === oIndex ? value : opt))
+        };
+      })
+    }));
   };
 
   const removeOption = (qIndex, oIndex) => {
-    const updated = form.questions.map((q, i) => {
-      if (i !== qIndex) return q;
-      return { ...q, options: q.options.filter((_, oi) => oi !== oIndex) };
-    });
-    setForm({ ...form, questions: updated });
+    setForm((prev) => ({
+      ...prev,
+      questions: prev.questions.map((question, i) => {
+        if (i !== qIndex) return question;
+        return { ...question, options: question.options.filter((_, oi) => oi !== oIndex) };
+      })
+    }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (form.questions.length === 0) {
-      return setError('Please add at least one question.');
+  const normalizeQuestions = (questions) => {
+    if (!questions.length) {
+      setError('Please add at least one question.');
+      return null;
     }
 
-    const formattedQuestions = form.questions.map((q) => {
+    return questions.map((q) => {
       if (q.questionType === 'mcq') {
         const options = q.options.slice(0, 4).map((opt) => opt.trim());
-        if (options.length !== 4 || options.some((opt) => !opt)) {
+        if (options.some((opt) => !opt)) {
           throw new Error('Each MCQ question must have exactly 4 non-empty options.');
         }
         return { ...q, options };
       }
       return { ...q, options: [] };
     });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
 
     try {
+      const formattedQuestions = normalizeQuestions(form.questions);
+      if (!formattedQuestions) return;
+
       const payload = { ...form, questions: formattedQuestions };
       if (isEditing) {
         await axios.put(`/api/surveys/${id}`, payload, {
-          headers: { Authorization: `Bearer ${user.token}` }
+          headers: getAuthHeaders()
         });
       } else {
         await axios.post('/api/surveys', payload, {
-          headers: { Authorization: `Bearer ${user.token}` }
+          headers: getAuthHeaders()
         });
       }
       navigate('/company/surveys');
@@ -166,7 +191,7 @@ const CreateEditSurvey = () => {
             <input
               type="text"
               value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              onChange={(e) => updateFormField('title', e.target.value)}
               placeholder="e.g. Product Satisfaction Survey"
               maxLength={80}
               required
@@ -179,7 +204,7 @@ const CreateEditSurvey = () => {
             <label>Description</label>
             <textarea
               value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              onChange={(e) => updateFormField('description', e.target.value)}
               placeholder="Brief description of what this survey is about"
               rows={2}
             />
@@ -191,7 +216,7 @@ const CreateEditSurvey = () => {
             <label>Select Product <span className="required">*</span></label>
             <select
               value={form.productId}
-              onChange={(e) => setForm({ ...form, productId: e.target.value })}
+              onChange={(e) => updateFormField('productId', e.target.value)}
               required
             >
               <option value="">-- Choose a product --</option>
