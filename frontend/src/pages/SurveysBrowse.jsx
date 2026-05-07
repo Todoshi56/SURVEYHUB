@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import ReportButton from '../components/ReportButton';
+import SearchWithHistory from '../components/SearchWithHistory';
+import useSearchHistory from '../hooks/useSearchHistory';
 
 export default function SurveysBrowse() {
   const { user } = useAuth();
@@ -10,6 +12,13 @@ export default function SurveysBrowse() {
   const [approvedProductIds, setApprovedProductIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const surveySearchKey = 'surveyhub_survey_search_history';
+  const {
+    history: searchHistory,
+    saveSearch: saveSurveySearch,
+    clearHistory: clearSurveySearchHistory,
+  } = useSearchHistory(surveySearchKey);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,7 +47,26 @@ export default function SurveysBrowse() {
       }
     };
     fetchData();
-  }, []);
+  }, [user]);
+
+  const filteredSurveys = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return surveys;
+    return surveys.filter((survey) => {
+      const surveyText = `${survey.title || ''} ${survey.company?.companyName || ''} ${survey.product?.name || ''} ${survey.description || ''}`.toLowerCase();
+      return surveyText.includes(query);
+    });
+  }, [surveys, search]);
+
+  const handleSurveySearch = (e) => {
+    e.preventDefault();
+    saveSurveySearch(search);
+  };
+
+  const handleSelectSurveySearch = (value) => {
+    setSearch(value);
+    saveSurveySearch(value);
+  };
 
   const isOwnCompanySurvey = (survey) => {
     if (user?.role !== 'company' || !user?.companyId) return false;
@@ -51,12 +79,24 @@ export default function SurveysBrowse() {
   return (
     <div className="container">
       <h1>Available Surveys</h1>
+      <SearchWithHistory
+        value={search}
+        onChange={setSearch}
+        onSubmit={handleSurveySearch}
+        placeholder="Search surveys by title, company, product, or description"
+        history={searchHistory}
+        onSelectHistory={handleSelectSurveySearch}
+        onClearHistory={clearSurveySearchHistory}
+        onClearSearch={() => setSearch('')}
+        title="Recent survey searches"
+      />
+
       {error && <p className="error">{error}</p>}
-      {surveys.length === 0 ? (
+      {filteredSurveys.length === 0 ? (
         <p>No surveys available at the moment.</p>
       ) : (
         <div className="surveys-grid">
-          {surveys.map((survey) => {
+          {filteredSurveys.map((survey) => {
             const ownCompany = isOwnCompanySurvey(survey);
             const productId = survey.product?._id || survey.product;
             const hasApprovedSample = productId && approvedProductIds.has(productId);
