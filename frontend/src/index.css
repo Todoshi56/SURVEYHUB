@@ -536,6 +536,23 @@ body {
   flex: 1;
 }
 
+.company-rating {
+  font-size: 0.85rem;
+  color: var(--text);
+  margin: 0.35rem 0 0.85rem;
+}
+
+.company-rating-empty {
+  color: var(--text-muted);
+}
+
+.company-rating-summary {
+  font-size: 0.92rem;
+  margin-bottom: 1rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
 .survey-product {
   font-size: 0.82rem;
   color: var(--primary);
