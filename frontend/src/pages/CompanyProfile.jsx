@@ -11,6 +11,7 @@ const CompanyProfile = () => {
     website: '',
     phone: ''
   });
+  const [rating, setRating] = useState({ average: 0, count: 0 });
   const [error, setError] = useState('');
   const { user, login } = useAuth();
   const navigate = useNavigate();
@@ -27,6 +28,10 @@ const CompanyProfile = () => {
           industry: data.industry || '',
           website: data.website || '',
           phone: data.phone || ''
+        });
+        setRating({
+          average: data.movementRatingAverage || 0,
+          count: data.movementRatingCount || 0
         });
       } catch (err) {
         // 404 means no profile yet — that's fine, user will create one
@@ -54,6 +59,11 @@ const CompanyProfile = () => {
       <div className="form-card">
         <h2>Company Profile</h2>
         <p className="form-subtitle">This information represents your company on the platform.</p>
+        {rating.count > 0 && (
+          <div className="company-rating-summary">
+            Movement rating: {rating.average.toFixed(1)} / 5 ({rating.count} review{rating.count > 1 ? 's' : ''})
+          </div>
+        )}
         {error && <div className="alert alert-error">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
