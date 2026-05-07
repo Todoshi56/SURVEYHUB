@@ -20,13 +20,13 @@ const Navbar = () => {
           {user.role === 'company' && (
             <>
               <Link to="/company/profile">Profile</Link>
-              <Link to="/company/products">Products</Link>
+              <Link to="/company/products">My Products</Link>
               <Link to="/company/surveys">My Surveys</Link>
+              <Link to="/company/sample-requests">Sample Requests</Link>
             </>
           )}
-          {user.role !== 'company' && (
-            <Link to="/surveys">Surveys</Link>
-          )}
+          <Link to="/surveys">Surveys</Link>
+          <Link to="/products">Products</Link>
           <Link to="/change-password">Change Password</Link>
           <span className="navbar-user">Hi, {user.name}</span>
           <button onClick={handleLogout} className="btn-logout">Logout</button>

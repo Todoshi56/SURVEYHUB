@@ -50,7 +50,6 @@ const Surveys = () => {
           <p style={{fontSize:'0.85rem', color:'#aaa'}}>
             Surveys let you collect MCQ, rating, and text feedback from customers.
           </p>
-          <Link to="/company/surveys/create" className="btn btn-primary">Create Survey</Link>
         </div>
       ) : (
         <div className="survey-list">
@@ -71,6 +70,7 @@ const Surveys = () => {
                 📝 {s.questions?.filter(q => q.questionType === 'text').length || 0} Text
               </p>
               <div className="survey-actions">
+                <Link to={`/company/surveys/${s._id}/analytics`} className="btn btn-sm btn-primary">View Results</Link>
                 <Link to={`/company/surveys/edit/${s._id}`} className="btn btn-sm btn-secondary">✏️ Edit</Link>
                 <button onClick={() => handleDelete(s._id)} className="btn btn-sm btn-danger">🗑️ Delete</button>
               </div>

@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 export default function SurveyDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [survey, setSurvey] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({});
+  const [hasApprovedSample, setHasApprovedSample] = useState(false);
 
   useEffect(() => {
     fetchSurveyAndCheck();
@@ -18,15 +20,24 @@ export default function SurveyDetail() {
 
   const fetchSurveyAndCheck = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const surveyRes = await axios.get(`http://localhost:5000/api/surveys/${id}`);
+      const surveyRes = await axios.get(`/api/surveys/${id}`);
       setSurvey(surveyRes.data);
 
-      if (token) {
-        const checkRes = await axios.get(`http://localhost:5000/api/responses/check/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setHasSubmitted(checkRes.data.hasSubmitted);
+      if (user?.token) {
+        const headers = { Authorization: `Bearer ${user.token}` };
+        const [checkRes, requestsRes] = await Promise.all([
+          axios.get(`/api/responses/check/${id}`, { headers }),
+          axios.get('/api/sample-requests/mine', { headers })
+        ]);
+        if (checkRes.data.hasSubmitted) {
+          navigate(`/response/${id}`, { replace: true });
+          return;
+        }
+        const productId = surveyRes.data.product?._id || surveyRes.data.product;
+        const approved = requestsRes.data.some(
+          (r) => r.status === 'approved' && r.product?._id === productId
+        );
+        setHasApprovedSample(approved);
       }
       setError('');
     } catch (err) {
@@ -45,25 +56,19 @@ export default function SurveyDetail() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (hasSubmitted) {
-      setError('You have already submitted this survey');
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
       const answers = survey.questions.map(q => ({
         questionId: q._id,
         questionText: q.questionText,
         answer: formData[q._id]
       }));
 
-      await axios.post('http://localhost:5000/api/responses/submit', {
+      await axios.post('/api/responses/submit', {
         surveyId: id,
         answers
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${user.token}` }
       });
 
       navigate('/thank-you', { state: { surveyId: id } });
@@ -77,21 +82,43 @@ export default function SurveyDetail() {
   if (loading) return <div className="container"><p>Loading survey...</p></div>;
   if (!survey) return <div className="container"><p className="error">Survey not found</p></div>;
 
+  const surveyCompanyId = survey.company?._id || survey.company;
+  const isOwnCompany =
+    user?.role === 'company' &&
+    user?.companyId &&
+    surveyCompanyId &&
+    String(surveyCompanyId) === String(user.companyId);
+
   return (
     <div className="container survey-detail">
       <button onClick={() => navigate('/surveys')} className="btn-back">← Back</button>
-      <h1>{survey.title}</h1>
-      <p className="description">{survey.description}</p>
-
-      {hasSubmitted && (
-        <div className="alert alert-warning">
-          You have already submitted this survey. You cannot submit it again.
-        </div>
+      {survey.product?.image && (
+        <img
+          src={survey.product.image}
+          alt={survey.product.name}
+          className="survey-product-image"
+        />
       )}
+      <h1>{survey.title}</h1>
+      {survey.product?.name && (
+        <p className="product-name">Product: {survey.product.name}</p>
+      )}
+      <p className="description">{survey.description}</p>
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      <form onSubmit={handleSubmit} disabled={hasSubmitted}>
+      {isOwnCompany ? (
+        <div className="alert alert-warning">
+          You can't take this survey — it belongs to your own company
+          {survey.company?.companyName ? ` (${survey.company.companyName})` : ''}.
+        </div>
+      ) : !hasApprovedSample ? (
+        <div className="alert alert-warning">
+          You can take this survey only after the company approves your sample request for this product.{' '}
+          <Link to="/products">Browse products</Link> to request a sample.
+        </div>
+      ) : (
+      <form onSubmit={handleSubmit}>
         {survey.questions.map((question, index) => (
           <div key={question._id} className="question-group">
             <label>{index + 1}. {question.questionText} {question.required && <span className="required">*</span>}</label>
@@ -106,7 +133,6 @@ export default function SurveyDetail() {
                       value={option}
                       onChange={(e) => handleInputChange(question._id, e.target.value)}
                       checked={formData[question._id] === option}
-                      disabled={hasSubmitted}
                       required={question.required}
                     />
                     {option}
@@ -123,7 +149,6 @@ export default function SurveyDetail() {
                     type="button"
                     className={`star ${formData[question._id] >= star ? 'active' : ''}`}
                     onClick={() => handleInputChange(question._id, star)}
-                    disabled={hasSubmitted}
                   >
                     ★
                   </button>
@@ -136,17 +161,17 @@ export default function SurveyDetail() {
                 value={formData[question._id] || ''}
                 onChange={(e) => handleInputChange(question._id, e.target.value)}
                 placeholder="Your answer"
-                disabled={hasSubmitted}
                 required={question.required}
               />
             )}
           </div>
         ))}
 
-        <button type="submit" className="btn btn-primary btn-full" disabled={hasSubmitted || submitting}>
+        <button type="submit" className="btn btn-primary btn-full" disabled={submitting}>
           {submitting ? 'Submitting...' : 'Submit Survey'}
         </button>
       </form>
+      )}
     </div>
   );
 }

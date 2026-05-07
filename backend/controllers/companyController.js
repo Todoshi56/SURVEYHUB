@@ -1,7 +1,7 @@
 const Company = require('../models/Company');
 
 const createOrUpdateProfile = async (req, res) => {
-  const { companyName, description, industry, website } = req.body;
+  const { companyName, description, industry, website, phone } = req.body;
   try {
     let company = await Company.findOne({ user: req.user._id });
     if (company) {
@@ -9,6 +9,7 @@ const createOrUpdateProfile = async (req, res) => {
       company.description = description;
       company.industry = industry;
       company.website = website;
+      company.phone = phone;
       await company.save();
     } else {
       company = await Company.create({
@@ -16,7 +17,8 @@ const createOrUpdateProfile = async (req, res) => {
         companyName,
         description,
         industry,
-        website
+        website,
+        phone
       });
     }
     res.json(company);

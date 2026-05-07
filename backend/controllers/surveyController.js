@@ -10,7 +10,7 @@ const getSurveys = async (req, res) => {
     const company = await getCompanyByUser(req.user._id);
     if (!company) return res.status(404).json({ message: 'Company profile not found.' });
     const surveys = await Survey.find({ company: company._id })
-      .populate('product', 'name')
+      .populate('product', 'name image')
       .sort({ createdAt: -1 });
     res.json(surveys);
   } catch (error) {
@@ -22,7 +22,7 @@ const getActiveSurveys = async (req, res) => {
   try {
     const surveys = await Survey.find({ isActive: true })
       .populate('company', 'companyName')
-      .populate('product', 'name')
+      .populate('product', 'name image')
       .sort({ createdAt: -1 });
     res.json(surveys);
   } catch (error) {
@@ -32,7 +32,9 @@ const getActiveSurveys = async (req, res) => {
 
 const getSurveyById = async (req, res) => {
   try {
-    const survey = await Survey.findById(req.params.id).populate('product', 'name');
+    const survey = await Survey.findById(req.params.id)
+      .populate('product', 'name image')
+      .populate('company', 'companyName');
     if (!survey) return res.status(404).json({ message: 'Survey not found.' });
     res.json(survey);
   } catch (error) {

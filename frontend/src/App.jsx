@@ -11,10 +11,13 @@ import Products from './pages/Products';
 import AddEditProduct from './pages/AddEditProduct';
 import Surveys from './pages/Surveys';
 import CreateEditSurvey from './pages/CreateEditSurvey';
+import SurveyAnalytics from './pages/SurveyAnalytics';
 import SurveysBrowse from './pages/SurveysBrowse';
 import SurveyDetail from './pages/SurveyDetail';
 import ThankYou from './pages/ThankYou';
 import ViewResponse from './pages/ViewResponse';
+import BrowseProducts from './pages/BrowseProducts';
+import SampleRequests from './pages/SampleRequests';
 
 function App() {
   return (
@@ -56,10 +59,19 @@ function App() {
             <Route path="/company/surveys/edit/:id" element={
               <ProtectedRoute role="company"><CreateEditSurvey /></ProtectedRoute>
             } />
+            <Route path="/company/surveys/:surveyId/analytics" element={
+              <ProtectedRoute role="company"><SurveyAnalytics /></ProtectedRoute>
+            } />
+            <Route path="/company/sample-requests" element={
+              <ProtectedRoute role="company"><SampleRequests /></ProtectedRoute>
+            } />
 
             {/* Customer routes */}
             <Route path="/surveys" element={
               <ProtectedRoute><SurveysBrowse /></ProtectedRoute>
+            } />
+            <Route path="/products" element={
+              <ProtectedRoute><BrowseProducts /></ProtectedRoute>
             } />
             <Route path="/survey/:id" element={
               <ProtectedRoute><SurveyDetail /></ProtectedRoute>

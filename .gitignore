@@ -11,6 +11,10 @@ node_modules/
 # Production
 /dist
 /build
+**/dist/
+
+# Uploaded product images (user-generated)
+backend/uploads/
 
 # IDE
 .vscode/

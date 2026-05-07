@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
@@ -7,11 +8,12 @@ const CompanyProfile = () => {
     companyName: '',
     description: '',
     industry: '',
-    website: ''
+    website: '',
+    phone: ''
   });
-  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const { user } = useAuth();
+  const { user, login } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -23,7 +25,8 @@ const CompanyProfile = () => {
           companyName: data.companyName || '',
           description: data.description || '',
           industry: data.industry || '',
-          website: data.website || ''
+          website: data.website || '',
+          phone: data.phone || ''
         });
       } catch (err) {
         // 404 means no profile yet — that's fine, user will create one
@@ -35,12 +38,12 @@ const CompanyProfile = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setMessage('');
     try {
-      await axios.post('/api/company/profile', form, {
+      const { data } = await axios.post('/api/company/profile', form, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
-      setMessage('Company profile saved successfully!');
+      login({ ...user, companyId: data._id, companyName: data.companyName });
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save profile.');
     }
@@ -52,7 +55,6 @@ const CompanyProfile = () => {
         <h2>Company Profile</h2>
         <p className="form-subtitle">This information represents your company on the platform.</p>
         {error && <div className="alert alert-error">{error}</div>}
-        {message && <div className="alert alert-success">{message}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Company Name <span className="required">*</span></label>
@@ -89,6 +91,15 @@ const CompanyProfile = () => {
               value={form.website}
               onChange={(e) => setForm({ ...form, website: e.target.value })}
               placeholder="https://yourcompany.com"
+            />
+          </div>
+          <div className="form-group">
+            <label>Company Phone</label>
+            <input
+              type="tel"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              placeholder="Public contact number for your company"
             />
           </div>
           <button type="submit" className="btn btn-primary">Save Profile</button>
