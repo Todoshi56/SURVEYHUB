@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Survey = require('../models/Survey');
 const Company = require('../models/Company');
 
@@ -46,6 +47,26 @@ const normalizeQuestions = (questions = []) => {
 
     return normalized;
   });
+};
+
+/**
+ * HELPER: Load a survey by ID with validation.
+ */
+const getSurveyByIdOrThrow = async (id) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const error = new Error('Invalid survey ID.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const survey = await Survey.findById(id);
+  if (!survey) {
+    const error = new Error('Survey not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return survey;
 };
 
 /**
@@ -146,17 +167,39 @@ const updateSurvey = async (req, res) => {
 };
 
 /**
+ * GET /surveys/:id
+ */
+const getSurveyById = async (req, res) => {
+  try {
+    const survey = await Survey.findById(req.params.id)
+      .populate('company', 'companyName user')
+      .populate('product', 'name image');
+
+    if (!survey) {
+      return res.status(404).json({ message: 'Survey not found.' });
+    }
+
+    res.json(survey);
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ message: error.message });
+  }
+};
+
+/**
  * DELETE /surveys/:id
  */
 const deleteSurvey = async (req, res) => {
   try {
-    const company = await getCompanyOrThrow(req.user._id);
-    const result = await Survey.deleteOne({ _id: req.params.id, company: company._id });
-    
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ message: 'Survey not found or unauthorized.' });
+    const survey = await getSurveyByIdOrThrow(req.params.id);
+
+    if (req.user.role === 'company') {
+      const company = await getCompanyOrThrow(req.user._id);
+      if (!survey.company.equals(company._id)) {
+        return res.status(403).json({ message: 'Not authorized to delete this survey.' });
+      }
     }
 
+    await survey.deleteOne();
     res.json({ message: 'Survey deleted successfully.' });
   } catch (error) {
     res.status(error.statusCode || 500).json({ message: error.message });
@@ -166,6 +209,7 @@ const deleteSurvey = async (req, res) => {
 module.exports = { 
   getSurveys, 
   getActiveSurveys, 
+  getSurveyById,
   createSurvey, 
   updateSurvey, 
   deleteSurvey 

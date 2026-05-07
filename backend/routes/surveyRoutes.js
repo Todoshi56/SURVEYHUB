@@ -18,7 +18,7 @@ router.post('/', protect, companyOnly, createSurvey);
 // PUT - update/edit an existing survey (company only)
 router.put('/:id', protect, companyOnly, updateSurvey);
 
-// DELETE - remove a survey permanently (company only)
-router.delete('/:id', protect, companyOnly, deleteSurvey);
+// DELETE - remove a survey permanently (company or admin)
+router.delete('/:id', protect, companyOrAdmin, deleteSurvey);
 
 module.exports = router;
