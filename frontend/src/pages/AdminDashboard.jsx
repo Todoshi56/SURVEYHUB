@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +10,9 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
+  const [search, setSearch] = useState('');
+  const [reportStatus, setReportStatus] = useState('all');
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -28,7 +31,7 @@ const AdminDashboard = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [user]);
 
   const updateReportStatus = async (id, status) => {
     setUpdatingId(id);
@@ -45,6 +48,39 @@ const AdminDashboard = () => {
     }
   };
 
+  const getAuthHeaders = () => ({ Authorization: `Bearer ${user.token}` });
+
+  const filteredReports = useMemo(() => {
+    return reports.filter((r) => reportStatus === 'all' || r.status === reportStatus);
+  }, [reports, reportStatus]);
+
+  const filteredSurveys = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return surveys;
+    return surveys.filter((s) => (
+      s.title?.toLowerCase().includes(query) ||
+      s.company?.companyName?.toLowerCase().includes(query) ||
+      s.product?.name?.toLowerCase().includes(query)
+    ));
+  }, [search, surveys]);
+
+  const handleDeleteSurvey = async (survey) => {
+    if (!window.confirm(`⚠️ DELETE SURVEY\n\nTitle: "${survey.title}"\nCompany: "${survey.company?.companyName || 'Unknown'}"\nThis action cannot be undone.`)) return;
+
+    setDeletingId(survey._id);
+    setError('');
+    try {
+      await axios.delete(`/api/surveys/${survey._id}`, {
+        headers: getAuthHeaders()
+      });
+      setSurveys((prev) => prev.filter((item) => item._id !== survey._id));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to delete survey.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="page-container">
       <div className="dashboard-header">
@@ -52,13 +88,56 @@ const AdminDashboard = () => {
         <p>Manage reports and survey responses across the platform.</p>
       </div>
 
+      <div className="dashboard-metrics">
+        <div className="metric-card">
+          <div className="metric-value">{filteredReports.filter((r) => r.status === 'open').length}</div>
+          <div className="metric-label">Open reports</div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-value">{surveys.filter((s) => s.isActive).length}</div>
+          <div className="metric-label">Active surveys</div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-value">{surveys.length}</div>
+          <div className="metric-label">Total surveys</div>
+        </div>
+      </div>
+
+      <div className="dashboard-filters">
+        <div className="filter-group">
+          <label htmlFor="surveySearch">Search surveys</label>
+          <input
+            id="surveySearch"
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by title, company, or product"
+          />
+        </div>
+        <div className="filter-group">
+          <label htmlFor="reportStatus">Report status</label>
+          <select
+            id="reportStatus"
+            value={reportStatus}
+            onChange={(e) => setReportStatus(e.target.value)}
+          >
+            <option value="all">All statuses</option>
+            <option value="open">Open</option>
+            <option value="resolved">Resolved</option>
+            <option value="dismissed">Dismissed</option>
+          </select>
+        </div>
+      </div>
+
       {error && <div className="alert alert-error">{error}</div>}
       {loading ? <p>Loading...</p> : (
         <>
           <div className="form-card">
             <h3>User Reports ({reports.length})</h3>
-            {reports.length === 0 ? (
-              <p className="empty-text">No reports submitted yet.</p>
+            {filteredReports.length === 0 ? (
+              <p className="empty-text">
+                {reports.length === 0 ? 'No reports submitted yet.' : 'No reports match the selected status.'}
+              </p>
             ) : (
               <div className="table-scroll">
                 <table className="data-table">
@@ -124,8 +203,10 @@ const AdminDashboard = () => {
 
           <div className="form-card">
             <h3>All Surveys ({surveys.length})</h3>
-            {surveys.length === 0 ? (
-              <p className="empty-text">No surveys exist.</p>
+            {filteredSurveys.length === 0 ? (
+              <p className="empty-text">
+                {surveys.length === 0 ? 'No surveys exist.' : 'No surveys match your search.'}
+              </p>
             ) : (
               <div className="table-scroll">
                 <table className="data-table">
@@ -139,7 +220,7 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {surveys.map((s) => (
+                    {filteredSurveys.map((s) => (
                       <tr key={s._id}>
                         <td><strong>{s.title}</strong></td>
                         <td>{s.company?.companyName || '—'}</td>
@@ -149,6 +230,13 @@ const AdminDashboard = () => {
                           <Link to={`/admin/surveys/${s._id}/responses`} className="btn btn-sm btn-primary">
                             View / Delete Responses
                           </Link>
+                          <button
+                            className="btn btn-sm btn-danger"
+                            onClick={() => handleDeleteSurvey(s)}
+                            disabled={deletingId === s._id}
+                          >
+                            {deletingId === s._id ? 'Deleting…' : 'Delete'}
+                          </button>
                         </td>
                       </tr>
                     ))}

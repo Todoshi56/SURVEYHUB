@@ -190,11 +190,13 @@ const getSurveyById = async (req, res) => {
  */
 const deleteSurvey = async (req, res) => {
   try {
-    const company = await getCompanyOrThrow(req.user._id);
     const survey = await getSurveyByIdOrThrow(req.params.id);
 
-    if (!survey.company.equals(company._id)) {
-      return res.status(403).json({ message: 'Not authorized to delete this survey.' });
+    if (req.user.role === 'company') {
+      const company = await getCompanyOrThrow(req.user._id);
+      if (!survey.company.equals(company._id)) {
+        return res.status(403).json({ message: 'Not authorized to delete this survey.' });
+      }
     }
 
     await survey.deleteOne();
