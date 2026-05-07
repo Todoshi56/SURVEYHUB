@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import ReportButton from '../components/ReportButton';
@@ -13,6 +13,9 @@ const BrowseProducts = () => {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [search, setSearch] = useState('');
+  const [searchHistory, setSearchHistory] = useState([]);
+  const productSearchKey = 'surveyhub_product_search_history';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,7 +34,50 @@ const BrowseProducts = () => {
       }
     };
     fetchData();
+  }, [user]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(productSearchKey);
+    if (stored) {
+      try {
+        setSearchHistory(JSON.parse(stored));
+      } catch {
+        localStorage.removeItem(productSearchKey);
+      }
+    }
   }, []);
+
+  const saveProductSearch = (value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const nextHistory = [trimmed, ...searchHistory.filter((item) => item !== trimmed)].slice(0, 10);
+    localStorage.setItem(productSearchKey, JSON.stringify(nextHistory));
+    setSearchHistory(nextHistory);
+  };
+
+  const clearProductSearchHistory = () => {
+    localStorage.removeItem(productSearchKey);
+    setSearchHistory([]);
+  };
+
+  const filteredProducts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return products;
+    return products.filter((p) => {
+      const productText = `${p.name || ''} ${p.company?.companyName || ''} ${p.category || ''} ${p.description || ''}`.toLowerCase();
+      return productText.includes(query);
+    });
+  }, [products, search]);
+
+  const handleProductSearch = (e) => {
+    e.preventDefault();
+    saveProductSearch(search);
+  };
+
+  const handleSelectProductSearch = (value) => {
+    setSearch(value);
+    saveProductSearch(value);
+  };
 
   const isOwnProduct = (product) => {
     if (user?.role !== 'company' || !user?.companyId) return false;
@@ -79,20 +125,57 @@ const BrowseProducts = () => {
         Request a sample of any product. Once the company approves your request, you can take their survey.
       </p>
 
+      <form className="search-bar" onSubmit={handleProductSearch}>
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search products by name, company, category, or description"
+        />
+        <button type="submit" className="btn btn-secondary">Search</button>
+      </form>
+
+      {searchHistory.length > 0 && (
+        <div className="search-history-card">
+          <div className="search-history-header">
+            <span>Recent product searches</span>
+            <button type="button" className="link-button" onClick={clearProductSearchHistory}>
+              Clear history
+            </button>
+          </div>
+          <div className="search-history-list">
+            {searchHistory.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="search-history-item"
+                onClick={() => handleSelectProductSearch(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {error && <div className="alert alert-error">{error}</div>}
       {feedback && <div className="alert alert-success">{feedback}</div>}
 
       {loading ? (
         <p>Loading products...</p>
-      ) : products.length === 0 ? (
+      ) : filteredProducts.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">📦</div>
-          <h3>No Products Yet</h3>
-          <p>Check back soon — companies are still adding their products.</p>
+          <div className="empty-icon">🔍</div>
+          <h3>{search ? 'No matching products' : 'No Products Yet'}</h3>
+          <p>
+            {search
+              ? 'Try a different term or clear your search to see more products.'
+              : 'Check back soon — companies are still adding their products.'}
+          </p>
         </div>
       ) : (
         <div className="surveys-grid">
-          {products.map((p) => {
+          {filteredProducts.map((p) => {
             const alreadyRequested = requestedIds.has(p._id);
             const ownProduct = isOwnProduct(p);
             return (
