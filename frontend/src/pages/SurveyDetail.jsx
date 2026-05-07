@@ -94,51 +94,133 @@ export default function SurveyDetail() {
       <form onSubmit={handleSubmit} disabled={hasSubmitted}>
         {survey.questions.map((question, index) => (
           <div key={question._id} className="question-group">
-            <label>{index + 1}. {question.questionText} {question.required && <span className="required">*</span>}</label>
+            <div style={{
+              display:'flex', alignItems:'flex-start', gap:'10px', marginBottom:'8px'
+            }}>
+              <span style={{
+                display:'inline-flex', alignItems:'center', justifyContent:'center',
+                minWidth:'28px', height:'28px', borderRadius:'50%',
+                background:'#4f46e5', color:'#fff',
+                fontSize:'0.8rem', fontWeight:'700', flexShrink:0
+              }}>
+                {index + 1}
+              </span>
+              <span style={{fontSize:'1rem', fontWeight:'600', color:'#1e1e2e', lineHeight:'1.5'}}>
+                {question.questionText}
+                {question.required && <span style={{color:'#dc2626', marginLeft:'4px'}}>*</span>}
+              </span>
+            </div>
 
             {question.questionType === 'mcq' && (
-              <div className="options">
-                {question.options.map((option, optIdx) => (
-                  <label key={optIdx} className="radio-label">
-                    <input
-                      type="radio"
-                      name={question._id}
-                      value={option}
-                      onChange={(e) => handleInputChange(question._id, e.target.value)}
-                      checked={formData[question._id] === option}
-                      disabled={hasSubmitted}
-                      required={question.required}
-                    />
-                    {option}
-                  </label>
-                ))}
+              <div style={{display:'flex', flexDirection:'column', gap:'10px', marginTop:'10px'}}>
+                {question.options.map((option, optIdx) => {
+                  const isSelected = formData[question._id] === option;
+                  return (
+                    <label key={optIdx} style={{
+                      display:'flex', alignItems:'center', gap:'12px',
+                      padding:'12px 16px',
+                      border: isSelected ? '2px solid #4f46e5' : '1.5px solid #ddd',
+                      borderRadius:'10px',
+                      cursor:'pointer',
+                      background: isSelected ? '#eef2ff' : '#fff',
+                      transition:'all 0.2s ease',
+                      fontWeight: isSelected ? '600' : '400'
+                    }}>
+                      <input
+                        type="radio"
+                        name={question._id}
+                        value={option}
+                        onChange={(e) => handleInputChange(question._id, e.target.value)}
+                        checked={isSelected}
+                        disabled={hasSubmitted}
+                        required={question.required}
+                        style={{accentColor:'#4f46e5', width:'16px', height:'16px'}}
+                      />
+                      <span style={{
+                        display:'inline-flex', alignItems:'center', justifyContent:'center',
+                        width:'24px', height:'24px', borderRadius:'50%',
+                        background: isSelected ? '#4f46e5' : '#f0f0f0',
+                        color: isSelected ? '#fff' : '#555',
+                        fontSize:'0.75rem', fontWeight:'700', flexShrink:0
+                      }}>
+                        {String.fromCharCode(65 + optIdx)}
+                      </span>
+                      <span>{option}</span>
+                    </label>
+                  );
+                })}
               </div>
             )}
 
             {question.questionType === 'rating' && (
-              <div className="rating">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    className={`star ${formData[question._id] >= star ? 'active' : ''}`}
-                    onClick={() => handleInputChange(question._id, star)}
-                    disabled={hasSubmitted}
-                  >
-                    ★
-                  </button>
-                ))}
+              <div style={{marginTop:'10px'}}>
+                <div style={{display:'flex', gap:'10px', flexWrap:'wrap'}}>
+                  {[1,2,3,4,5].map((num) => {
+                    const selected = formData[question._id] === num;
+                    const getBg = (n) => {
+                      if (n <= 2) return selected && n === num ? '#dc2626' : n === num ? '#fecaca' : '#fff5f5';
+                      if (n === 3) return selected && n === num ? '#d97706' : n === num ? '#fde68a' : '#fffbeb';
+                      return selected && n === num ? '#16a34a' : n === num ? '#bbf7d0' : '#f0fdf4';
+                    };
+                    const getBorder = (n) => {
+                      if (n <= 2) return '#dc2626';
+                      if (n === 3) return '#d97706';
+                      return '#16a34a';
+                    };
+                    return (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => handleInputChange(question._id, num)}
+                        disabled={hasSubmitted}
+                        style={{
+                          width:'52px', height:'52px',
+                          borderRadius:'50%',
+                          border: formData[question._id] === num
+                            ? `2px solid ${getBorder(num)}`
+                            : '1.5px solid #ddd',
+                          background: formData[question._id] === num ? getBg(num) : '#f9f9f9',
+                          fontWeight:'700', fontSize:'1.1rem',
+                          cursor:'pointer',
+                          transition:'all 0.2s ease',
+                          transform: formData[question._id] === num ? 'scale(1.15)' : 'scale(1)'
+                        }}
+                      >
+                        {num}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p style={{fontSize:'0.78rem', color:'#888', marginTop:'8px'}}>
+                  🔴 1–2 = Poor &nbsp;|&nbsp; 🟡 3 = Average &nbsp;|&nbsp; 🟢 4–5 = Excellent
+                </p>
               </div>
             )}
 
             {question.questionType === 'text' && (
-              <textarea
-                value={formData[question._id] || ''}
-                onChange={(e) => handleInputChange(question._id, e.target.value)}
-                placeholder="Your answer"
-                disabled={hasSubmitted}
-                required={question.required}
-              />
+              <div style={{marginTop:'10px'}}>
+                <textarea
+                  value={formData[question._id] || ''}
+                  onChange={(e) => handleInputChange(question._id, e.target.value)}
+                  placeholder="✍️ Share your thoughts here..."
+                  disabled={hasSubmitted}
+                  required={question.required}
+                  rows={4}
+                  style={{
+                    width:'100%', padding:'12px 14px',
+                    border:'1.5px solid #ddd', borderRadius:'10px',
+                    fontSize:'0.95rem', resize:'vertical',
+                    fontFamily:'inherit', outline:'none',
+                    transition:'border 0.2s',
+                    boxSizing:'border-box'
+                  }}
+                  onFocus={(e) => e.target.style.border='1.5px solid #4f46e5'}
+                  onBlur={(e) => e.target.style.border='1.5px solid #ddd'}
+                />
+                <p style={{fontSize:'0.75rem', color:'#aaa', textAlign:'right', margin:'4px 0 0 0'}}>
+                  {(formData[question._id] || '').length} characters
+                </p>
+              </div>
             )}
           </div>
         ))}
