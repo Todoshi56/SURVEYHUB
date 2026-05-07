@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import ReportButton from '../components/ReportButton';
+import SearchWithHistory from '../components/SearchWithHistory';
+import useSearchHistory from '../hooks/useSearchHistory';
 
 const BrowseProducts = () => {
   const { user } = useAuth();
@@ -14,8 +16,12 @@ const BrowseProducts = () => {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [search, setSearch] = useState('');
-  const [searchHistory, setSearchHistory] = useState([]);
   const productSearchKey = 'surveyhub_product_search_history';
+  const {
+    history: searchHistory,
+    saveSearch: saveProductSearch,
+    clearHistory: clearProductSearchHistory,
+  } = useSearchHistory(productSearchKey);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,30 +41,6 @@ const BrowseProducts = () => {
     };
     fetchData();
   }, [user]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(productSearchKey);
-    if (stored) {
-      try {
-        setSearchHistory(JSON.parse(stored));
-      } catch {
-        localStorage.removeItem(productSearchKey);
-      }
-    }
-  }, []);
-
-  const saveProductSearch = (value) => {
-    const trimmed = value.trim();
-    if (!trimmed) return;
-    const nextHistory = [trimmed, ...searchHistory.filter((item) => item !== trimmed)].slice(0, 10);
-    localStorage.setItem(productSearchKey, JSON.stringify(nextHistory));
-    setSearchHistory(nextHistory);
-  };
-
-  const clearProductSearchHistory = () => {
-    localStorage.removeItem(productSearchKey);
-    setSearchHistory([]);
-  };
 
   const filteredProducts = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -125,38 +107,17 @@ const BrowseProducts = () => {
         Request a sample of any product. Once the company approves your request, you can take their survey.
       </p>
 
-      <form className="search-bar" onSubmit={handleProductSearch}>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search products by name, company, category, or description"
-        />
-        <button type="submit" className="btn btn-secondary">Search</button>
-      </form>
-
-      {searchHistory.length > 0 && (
-        <div className="search-history-card">
-          <div className="search-history-header">
-            <span>Recent product searches</span>
-            <button type="button" className="link-button" onClick={clearProductSearchHistory}>
-              Clear history
-            </button>
-          </div>
-          <div className="search-history-list">
-            {searchHistory.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className="search-history-item"
-                onClick={() => handleSelectProductSearch(item)}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <SearchWithHistory
+        value={search}
+        onChange={setSearch}
+        onSubmit={handleProductSearch}
+        placeholder="Search products by name, company, category, or description"
+        history={searchHistory}
+        onSelectHistory={handleSelectProductSearch}
+        onClearHistory={clearProductSearchHistory}
+        onClearSearch={() => setSearch('')}
+        title="Recent product searches"
+      />
 
       {error && <div className="alert alert-error">{error}</div>}
       {feedback && <div className="alert alert-success">{feedback}</div>}
