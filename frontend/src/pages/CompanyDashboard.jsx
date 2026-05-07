@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import AdminDashboard from './AdminDashboard';
 
 const CustomerDashboard = ({ user }) => (
   <div className="page-container">
@@ -24,6 +25,10 @@ const CustomerDashboard = ({ user }) => (
 
 const CompanyDashboard = () => {
   const { user } = useAuth();
+
+  if (user?.role === 'admin') {
+    return <AdminDashboard />;
+  }
 
   if (user?.role === 'customer') {
     return <CustomerDashboard user={user} />;

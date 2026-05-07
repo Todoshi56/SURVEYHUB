@@ -17,6 +17,9 @@ const Navbar = () => {
       </div>
       {user && (
         <div className="navbar-links">
+          {user.role === 'admin' && (
+            <Link to="/dashboard">Admin</Link>
+          )}
           {user.role === 'company' && (
             <>
               <Link to="/company/profile">Profile</Link>
@@ -25,8 +28,12 @@ const Navbar = () => {
               <Link to="/company/sample-requests">Sample Requests</Link>
             </>
           )}
-          <Link to="/surveys">Surveys</Link>
-          <Link to="/products">Products</Link>
+          {user.role !== 'admin' && (
+            <>
+              <Link to="/surveys">Surveys</Link>
+              <Link to="/products">Products</Link>
+            </>
+          )}
           <Link to="/change-password">Change Password</Link>
           <span className="navbar-user">Hi, {user.name}</span>
           <button onClick={handleLogout} className="btn-logout">Logout</button>

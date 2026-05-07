@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { getSurveys, getActiveSurveys, getSurveyById, createSurvey, updateSurvey, deleteSurvey } = require('../controllers/surveyController');
-const { protect, companyOnly } = require('../middleware/authMiddleware');
+const { protect, companyOnly, companyOrAdmin } = require('../middleware/authMiddleware');
 
-// GET all surveys for the logged-in company
-router.get('/', protect, companyOnly, getSurveys);
+// GET all surveys for the logged-in company (admin sees all)
+router.get('/', protect, companyOrAdmin, getSurveys);
 
 // GET all active surveys (public - for customers to browse)
 router.get('/browse/active', getActiveSurveys);

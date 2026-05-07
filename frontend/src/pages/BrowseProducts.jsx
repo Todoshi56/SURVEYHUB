@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import ReportButton from '../components/ReportButton';
 
 const BrowseProducts = () => {
   const { user } = useAuth();
@@ -105,17 +106,25 @@ const BrowseProducts = () => {
                 <p className="company-name">{p.company?.companyName || 'Unknown company'}</p>
                 {p.category && <p className="product-name">Category: {p.category}</p>}
                 {p.description && <p className="description">{p.description}</p>}
-                {ownProduct ? (
-                  <p className="field-hint">This is your own product.</p>
-                ) : (
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => openRequest(p)}
-                    disabled={alreadyRequested}
-                  >
-                    {alreadyRequested ? 'Sample Requested' : 'Request Sample'}
-                  </button>
-                )}
+                <div className="card-actions">
+                  {ownProduct ? (
+                    <p className="field-hint">This is your own product.</p>
+                  ) : (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => openRequest(p)}
+                      disabled={alreadyRequested}
+                    >
+                      {alreadyRequested ? 'Sample Requested' : 'Request Sample'}
+                    </button>
+                  )}
+                  {!ownProduct && (
+                    <ReportButton
+                      targetUserId={p.company?.user}
+                      targetLabel={`company "${p.company?.companyName || 'Unknown'}"`}
+                    />
+                  )}
+                </div>
               </div>
             );
           })}

@@ -1342,3 +1342,11 @@ form:disabled {
   background: #fee2e2;
   color: #991b1b;
 }
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}

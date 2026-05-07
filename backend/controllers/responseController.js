@@ -60,9 +60,11 @@ const getSurveyResponses = async (req, res) => {
     const survey = await Survey.findById(surveyId);
     if (!survey) return res.status(404).json({ message: 'Survey not found.' });
 
-    const company = await getCompanyByUser(req.user._id);
-    if (!company || survey.company.toString() !== company._id.toString()) {
-      return res.status(403).json({ message: 'Access denied.' });
+    if (req.user.role !== 'admin') {
+      const company = await getCompanyByUser(req.user._id);
+      if (!company || survey.company.toString() !== company._id.toString()) {
+        return res.status(403).json({ message: 'Access denied.' });
+      }
     }
 
     const responses = await Response.find({ survey: surveyId })
@@ -74,6 +76,17 @@ const getSurveyResponses = async (req, res) => {
       totalResponses: responses.length,
       responses
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const deleteResponse = async (req, res) => {
+  try {
+    const response = await Response.findById(req.params.id);
+    if (!response) return res.status(404).json({ message: 'Response not found.' });
+    await response.deleteOne();
+    res.json({ message: 'Response deleted.' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -120,9 +133,11 @@ const getSurveyAnalytics = async (req, res) => {
     const survey = await Survey.findById(surveyId);
     if (!survey) return res.status(404).json({ message: 'Survey not found.' });
 
-    const company = await getCompanyByUser(req.user._id);
-    if (!company || survey.company.toString() !== company._id.toString()) {
-      return res.status(403).json({ message: 'Access denied.' });
+    if (req.user.role !== 'admin') {
+      const company = await getCompanyByUser(req.user._id);
+      if (!company || survey.company.toString() !== company._id.toString()) {
+        return res.status(403).json({ message: 'Access denied.' });
+      }
     }
 
     const responses = await Response.find({ survey: surveyId });
@@ -157,5 +172,6 @@ module.exports = {
   getSurveyResponses,
   checkUserSubmission,
   getUserResponse,
-  getSurveyAnalytics
+  getSurveyAnalytics,
+  deleteResponse
 };

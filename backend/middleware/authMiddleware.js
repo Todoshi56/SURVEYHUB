@@ -26,4 +26,20 @@ const companyOnly = (req, res, next) => {
   }
 };
 
-module.exports = { protect, companyOnly };
+const adminOnly = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Access denied: Admin only' });
+  }
+};
+
+const companyOrAdmin = (req, res, next) => {
+  if (req.user && (req.user.role === 'company' || req.user.role === 'admin')) {
+    next();
+  } else {
+    res.status(403).json({ message: 'Access denied' });
+  }
+};
+
+module.exports = { protect, companyOnly, adminOnly, companyOrAdmin };

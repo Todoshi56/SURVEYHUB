@@ -60,7 +60,10 @@ function App() {
               <ProtectedRoute role="company"><CreateEditSurvey /></ProtectedRoute>
             } />
             <Route path="/company/surveys/:surveyId/analytics" element={
-              <ProtectedRoute role="company"><SurveyAnalytics /></ProtectedRoute>
+              <ProtectedRoute roles={["company","admin"]}><SurveyAnalytics /></ProtectedRoute>
+            } />
+            <Route path="/admin/surveys/:surveyId/responses" element={
+              <ProtectedRoute role="admin"><SurveyAnalytics /></ProtectedRoute>
             } />
             <Route path="/company/sample-requests" element={
               <ProtectedRoute role="company"><SampleRequests /></ProtectedRoute>

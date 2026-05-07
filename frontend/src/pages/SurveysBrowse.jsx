@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import ReportButton from '../components/ReportButton';
 
 export default function SurveysBrowse() {
   const { user } = useAuth();
@@ -73,19 +74,27 @@ export default function SurveysBrowse() {
                 <p className="product-name">Product: {survey.product?.name}</p>
                 <p className="description">{survey.description || 'No description'}</p>
                 <p className="questions-count">{survey.questions?.length} questions</p>
-                {ownCompany ? (
-                  <p className="field-hint">
-                    You can't take this survey — it belongs to your own company.
-                  </p>
-                ) : hasApprovedSample ? (
-                  <Link to={`/survey/${survey._id}`} className="btn btn-primary">
-                    Take Survey
-                  </Link>
-                ) : (
-                  <p className="field-hint">
-                    Request a sample of this product first — once the company approves, you can take the survey.
-                  </p>
-                )}
+                <div className="card-actions">
+                  {ownCompany ? (
+                    <p className="field-hint">
+                      You can't take this survey — it belongs to your own company.
+                    </p>
+                  ) : hasApprovedSample ? (
+                    <Link to={`/survey/${survey._id}`} className="btn btn-primary">
+                      Take Survey
+                    </Link>
+                  ) : (
+                    <p className="field-hint">
+                      Request a sample of this product first — once the company approves, you can take the survey.
+                    </p>
+                  )}
+                  {!ownCompany && (
+                    <ReportButton
+                      targetUserId={survey.company?.user}
+                      targetLabel={`company "${survey.company?.companyName || 'Unknown'}"`}
+                    />
+                  )}
+                </div>
               </div>
             );
           })}

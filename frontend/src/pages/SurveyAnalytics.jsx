@@ -35,6 +35,29 @@ const SurveyAnalytics = () => {
   const [responsesData, setResponsesData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const isAdmin = user?.role === 'admin';
+
+  const handleDeleteResponse = async (id) => {
+    if (!window.confirm('Delete this response? This cannot be undone.')) return;
+    setDeletingId(id);
+    try {
+      await axios.delete(`/api/responses/${id}`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      setResponsesData((prev) => ({
+        ...prev,
+        responses: prev.responses.filter((r) => r._id !== id),
+        totalResponses: prev.totalResponses - 1
+      }));
+      setAnalytics((prev) => prev ? { ...prev, totalResponses: prev.totalResponses - 1 } : prev);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete response.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -257,6 +280,7 @@ const SurveyAnalytics = () => {
                   {analytics.analytics.map((q) => (
                     <th key={q.questionId}>{q.questionText}</th>
                   ))}
+                  {isAdmin && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -277,6 +301,17 @@ const SurveyAnalytics = () => {
                         </td>
                       );
                     })}
+                    {isAdmin && (
+                      <td className="action-cell">
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() => handleDeleteResponse(r._id)}
+                          disabled={deletingId === r._id}
+                        >
+                          {deletingId === r._id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

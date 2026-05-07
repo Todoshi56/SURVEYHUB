@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import ReportButton from '../components/ReportButton';
 
 const SampleRequests = () => {
   const { user } = useAuth();
@@ -128,6 +129,10 @@ const SampleRequests = () => {
                         Reset
                       </button>
                     )}
+                    <ReportButton
+                      targetUserId={r.requester?._id}
+                      targetLabel={r.requesterName || 'this requester'}
+                    />
                   </td>
                 </tr>
               ))}
