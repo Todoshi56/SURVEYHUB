@@ -18,14 +18,29 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 const escapeCsvCell = (value) => {
   if (value === null || value === undefined) return '';
   const str = Array.isArray(value) ? value.join('; ') : String(value);
-  if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
-  return str;
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 };
 
 const formatAnswer = (answer) => {
   if (answer === null || answer === undefined) return '—';
-  if (Array.isArray(answer)) return answer.join(', ');
-  return String(answer);
+  return Array.isArray(answer) ? answer.join(', ') : String(answer);
+};
+
+const getQuestionCounts = (question) => {
+  const counts = {};
+  if (question.questionType === 'rating') {
+    [1, 2, 3, 4, 5].forEach((value) => { counts[value] = 0; });
+  }
+
+  question.answers.forEach((answer) => {
+    const values = Array.isArray(answer) ? answer : [answer];
+    values.forEach((value) => {
+      const key = String(value);
+      counts[key] = (counts[key] || 0) + 1;
+    });
+  });
+
+  return counts;
 };
 
 const SurveyAnalytics = () => {
@@ -39,34 +54,20 @@ const SurveyAnalytics = () => {
 
   const isAdmin = user?.role === 'admin';
 
-  const handleDeleteResponse = async (id) => {
-    if (!window.confirm('Delete this response? This cannot be undone.')) return;
-    setDeletingId(id);
-    try {
-      await axios.delete(`/api/responses/${id}`, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      setResponsesData((prev) => ({
-        ...prev,
-        responses: prev.responses.filter((r) => r._id !== id),
-        totalResponses: prev.totalResponses - 1
-      }));
-      setAnalytics((prev) => prev ? { ...prev, totalResponses: prev.totalResponses - 1 } : prev);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete response.');
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
   useEffect(() => {
+    if (!user?.token) return;
+
     const fetchData = async () => {
+      setLoading(true);
+      setError('');
+
       try {
         const headers = { Authorization: `Bearer ${user.token}` };
         const [analyticsRes, responsesRes] = await Promise.all([
           axios.get(`/api/responses/analytics/${surveyId}`, { headers }),
           axios.get(`/api/responses/survey/${surveyId}`, { headers })
         ]);
+
         setAnalytics(analyticsRes.data);
         setResponsesData(responsesRes.data);
       } catch (err) {
@@ -75,69 +76,60 @@ const SurveyAnalytics = () => {
         setLoading(false);
       }
     };
-    fetchData();
-  }, [surveyId]);
 
-  const ratingStats = useMemo(() => {
-    if (!analytics) return [];
-    return analytics.analytics
+    fetchData();
+  }, [surveyId, user?.token]);
+
+  const questions = useMemo(() => analytics?.analytics || [], [analytics]);
+  const totalResponses = analytics?.totalResponses || 0;
+  const chartQuestion = useMemo(
+    () => questions.find((q) => q.questionType === 'mcq' || q.questionType === 'rating') || null,
+    [questions]
+  );
+
+  const ratingStats = useMemo(
+    () => questions
       .filter((q) => q.questionType === 'rating')
-      .map((q) => {
-        const numeric = q.answers
-          .map((a) => Number(a))
-          .filter((n) => !Number.isNaN(n));
-        const avg = numeric.length
-          ? numeric.reduce((sum, n) => sum + n, 0) / numeric.length
+      .map((question) => {
+        const values = question.answers
+          .map((answer) => Number(answer))
+          .filter((value) => !Number.isNaN(value));
+        const average = values.length
+          ? values.reduce((sum, value) => sum + value, 0) / values.length
           : 0;
+
         return {
-          questionId: q.questionId,
-          questionText: q.questionText,
-          count: numeric.length,
-          average: avg
+          questionId: question.questionId,
+          questionText: question.questionText,
+          count: values.length,
+          average
         };
-      });
-  }, [analytics]);
+      }),
+    [questions]
+  );
 
   const overallAverageRating = useMemo(() => {
     if (!ratingStats.length) return null;
     const totals = ratingStats.reduce(
-      (acc, r) => {
-        acc.sum += r.average * r.count;
-        acc.count += r.count;
-        return acc;
-      },
+      (acc, stat) => ({
+        sum: acc.sum + stat.average * stat.count,
+        count: acc.count + stat.count
+      }),
       { sum: 0, count: 0 }
     );
+
     return totals.count ? totals.sum / totals.count : null;
   }, [ratingStats]);
 
-  const chartQuestion = useMemo(() => {
-    if (!analytics) return null;
-    return analytics.analytics.find(
-      (q) => q.questionType === 'mcq' || q.questionType === 'rating'
-    );
-  }, [analytics]);
-
   const chartData = useMemo(() => {
     if (!chartQuestion) return null;
-    const counts = {};
-    if (chartQuestion.questionType === 'rating') {
-      [1, 2, 3, 4, 5].forEach((n) => { counts[n] = 0; });
-    }
-    chartQuestion.answers.forEach((ans) => {
-      const values = Array.isArray(ans) ? ans : [ans];
-      values.forEach((v) => {
-        const key = String(v);
-        counts[key] = (counts[key] || 0) + 1;
-      });
-    });
+    const counts = getQuestionCounts(chartQuestion);
     const labels = Object.keys(counts);
-    const data = labels.map((l) => counts[l]);
     return {
       labels,
       datasets: [{
         label: 'Responses',
-        data,
+        data: labels.map((label) => counts[label]),
         backgroundColor: 'rgba(79, 70, 229, 0.7)',
         borderColor: 'rgba(79, 70, 229, 1)',
         borderWidth: 1
@@ -147,27 +139,33 @@ const SurveyAnalytics = () => {
 
   const downloadCsv = () => {
     if (!responsesData || !analytics) return;
-    const questions = analytics.analytics;
+
     const header = ['Respondent', 'Email', 'Submitted At', ...questions.map((q) => q.questionText)];
-    const rows = responsesData.responses.map((r) => {
+    const rows = responsesData.responses.map((response) => {
       const base = [
-        r.user?.name || 'Anonymous',
-        r.user?.email || '',
-        new Date(r.createdAt).toISOString()
+        response.user?.name || 'Anonymous',
+        response.user?.email || '',
+        new Date(response.createdAt).toISOString()
       ];
-      const answers = questions.map((q) => {
-        const found = r.answers.find((a) => a.questionId === q.questionId.toString());
+      const answers = questions.map((question) => {
+        const found = response.answers.find(
+          (answer) => answer.questionId === question.questionId.toString()
+        );
         return found ? formatAnswer(found.answer) : '';
       });
+
       return [...base, ...answers];
     });
+
     const csv = [header, ...rows]
       .map((row) => row.map(escapeCsvCell).join(','))
       .join('\n');
+
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     const safeTitle = (analytics.surveyTitle || 'survey').replace(/[^a-z0-9]+/gi, '_');
+
     link.href = url;
     link.download = `${safeTitle}_responses.csv`;
     document.body.appendChild(link);
@@ -176,16 +174,49 @@ const SurveyAnalytics = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (loading) return <div className="page-container"><p>Loading analytics...</p></div>;
-  if (error) return (
-    <div className="page-container">
-      <div className="alert alert-error">{error}</div>
-      <Link to="/company/surveys" className="btn btn-secondary">← Back to Surveys</Link>
-    </div>
-  );
-  if (!analytics) return null;
+  const handleDeleteResponse = async (id) => {
+    if (!window.confirm('Delete this response? This cannot be undone.')) return;
 
-  const totalResponses = analytics.totalResponses;
+    setDeletingId(id);
+
+    try {
+      await axios.delete(`/api/responses/${id}`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+
+      setResponsesData((prev) => ({
+        ...prev,
+        responses: prev.responses.filter((response) => response._id !== id)
+      }));
+      setAnalytics((prev) => prev && ({
+        ...prev,
+        totalResponses: Math.max(0, prev.totalResponses - 1)
+      }));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete response.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="page-container">
+        <p>Loading analytics...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page-container">
+        <div className="alert alert-error">{error}</div>
+        <Link to="/company/surveys" className="btn btn-secondary">← Back to Surveys</Link>
+      </div>
+    );
+  }
+
+  if (!analytics) return null;
 
   return (
     <div className="page-container">
@@ -214,14 +245,12 @@ const SurveyAnalytics = () => {
         <div className="stat-card">
           <div className="stat-label">Average Rating</div>
           <div className="stat-value">
-            {overallAverageRating !== null
-              ? `${overallAverageRating.toFixed(2)} / 5`
-              : 'N/A'}
+            {overallAverageRating !== null ? `${overallAverageRating.toFixed(2)} / 5` : 'N/A'}
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Questions</div>
-          <div className="stat-value">{analytics.analytics.length}</div>
+          <div className="stat-value">{questions.length}</div>
         </div>
       </div>
 
@@ -237,11 +266,11 @@ const SurveyAnalytics = () => {
               </tr>
             </thead>
             <tbody>
-              {ratingStats.map((r) => (
-                <tr key={r.questionId}>
-                  <td>{r.questionText}</td>
-                  <td>{r.count}</td>
-                  <td>{r.count ? `${r.average.toFixed(2)} / 5` : '—'}</td>
+              {ratingStats.map((stat) => (
+                <tr key={stat.questionId}>
+                  <td>{stat.questionText}</td>
+                  <td>{stat.count}</td>
+                  <td>{stat.count ? `${stat.average.toFixed(2)} / 5` : '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -277,26 +306,26 @@ const SurveyAnalytics = () => {
                 <tr>
                   <th>Respondent</th>
                   <th>Submitted</th>
-                  {analytics.analytics.map((q) => (
-                    <th key={q.questionId}>{q.questionText}</th>
+                  {questions.map((question) => (
+                    <th key={question.questionId}>{question.questionText}</th>
                   ))}
                   {isAdmin && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
-                {responsesData.responses.map((r) => (
-                  <tr key={r._id}>
+                {responsesData.responses.map((response) => (
+                  <tr key={response._id}>
                     <td>
-                      <div>{r.user?.name || 'Anonymous'}</div>
-                      <div className="cell-meta">{r.user?.email}</div>
+                      <div>{response.user?.name || 'Anonymous'}</div>
+                      <div className="cell-meta">{response.user?.email}</div>
                     </td>
-                    <td>{new Date(r.createdAt).toLocaleDateString()}</td>
-                    {analytics.analytics.map((q) => {
-                      const found = r.answers.find(
-                        (a) => a.questionId === q.questionId.toString()
+                    <td>{new Date(response.createdAt).toLocaleDateString()}</td>
+                    {questions.map((question) => {
+                      const found = response.answers.find(
+                        (answer) => answer.questionId === question.questionId.toString()
                       );
                       return (
-                        <td key={q.questionId}>
+                        <td key={question.questionId}>
                           {found ? formatAnswer(found.answer) : '—'}
                         </td>
                       );
@@ -305,10 +334,10 @@ const SurveyAnalytics = () => {
                       <td className="action-cell">
                         <button
                           className="btn btn-sm btn-danger"
-                          onClick={() => handleDeleteResponse(r._id)}
-                          disabled={deletingId === r._id}
+                          onClick={() => handleDeleteResponse(response._id)}
+                          disabled={deletingId === response._id}
                         >
-                          {deletingId === r._id ? 'Deleting...' : 'Delete'}
+                          {deletingId === response._id ? 'Deleting...' : 'Delete'}
                         </button>
                       </td>
                     )}
