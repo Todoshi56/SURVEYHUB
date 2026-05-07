@@ -15,6 +15,10 @@ const BrowseProducts = () => {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [activeRatingCompany, setActiveRatingCompany] = useState(null);
+  const [ratingScore, setRatingScore] = useState(5);
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const [ratingError, setRatingError] = useState('');
   const [search, setSearch] = useState('');
   const productSearchKey = 'surveyhub_product_search_history';
   const {
@@ -59,6 +63,53 @@ const BrowseProducts = () => {
   const handleSelectProductSearch = (value) => {
     setSearch(value);
     saveProductSearch(value);
+  };
+
+  const openRating = (company) => {
+    setActiveRatingCompany(company);
+    setRatingScore(5);
+    setRatingError('');
+  };
+
+  const closeRating = () => {
+    setActiveRatingCompany(null);
+    setRatingError('');
+  };
+
+  const submitCompanyRating = async (e) => {
+    e.preventDefault();
+    if (!activeRatingCompany) return;
+
+    setRatingSubmitting(true);
+    setRatingError('');
+
+    try {
+      const { data } = await axios.post(
+        `/api/company/${activeRatingCompany._id}/rating`,
+        { score: ratingScore },
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+
+      setProducts((prev) =>
+        prev.map((product) => {
+          if (String(product.company?._id) !== String(activeRatingCompany._id)) return product;
+          return {
+            ...product,
+            company: {
+              ...product.company,
+              movementRatingAverage: data.movementRatingAverage,
+              movementRatingCount: data.movementRatingCount
+            }
+          };
+        })
+      );
+      setFeedback('Thank you for rating this company movement.');
+      closeRating();
+    } catch (err) {
+      setRatingError(err.response?.data?.message || 'Failed to submit rating.');
+    } finally {
+      setRatingSubmitting(false);
+    }
   };
 
   const isOwnProduct = (product) => {
@@ -150,17 +201,35 @@ const BrowseProducts = () => {
                 <p className="company-name">{p.company?.companyName || 'Unknown company'}</p>
                 {p.category && <p className="product-name">Category: {p.category}</p>}
                 {p.description && <p className="description">{p.description}</p>}
+                {p.company?.movementRatingCount > 0 ? (
+                  <p className="company-rating">
+                    Movement rating: {p.company.movementRatingAverage.toFixed(1)} / 5 ({p.company.movementRatingCount})
+                  </p>
+                ) : (
+                  <p className="company-rating company-rating-empty">No movement ratings yet.</p>
+                )}
                 <div className="card-actions">
                   {ownProduct ? (
                     <p className="field-hint">This is your own product.</p>
                   ) : (
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => openRequest(p)}
-                      disabled={alreadyRequested}
-                    >
-                      {alreadyRequested ? 'Sample Requested' : 'Request Sample'}
-                    </button>
+                    <>
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => openRequest(p)}
+                        disabled={alreadyRequested}
+                      >
+                        {alreadyRequested ? 'Sample Requested' : 'Request Sample'}
+                      </button>
+                      {user?.role === 'customer' && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => openRating(p.company)}
+                        >
+                          Rate Movement
+                        </button>
+                      )}
+                    </>
                   )}
                   {!ownProduct && (
                     <ReportButton
@@ -194,6 +263,36 @@ const BrowseProducts = () => {
                   {submitting ? 'Sending...' : 'Send Request'}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={closeRequest}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {activeRatingCompany && (
+        <div className="modal-backdrop" onClick={closeRating}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3>Rate movement for "{activeRatingCompany.companyName}"</h3>
+            {ratingError && <div className="alert alert-error">{ratingError}</div>}
+            <form onSubmit={submitCompanyRating}>
+              <div className="form-group">
+                <label>Rating</label>
+                <select
+                  value={ratingScore}
+                  onChange={(e) => setRatingScore(Number(e.target.value))}
+                >
+                  {[5, 4, 3, 2, 1].map((score) => (
+                    <option key={score} value={score}>{score} star{score > 1 ? 's' : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn btn-primary" disabled={ratingSubmitting}>
+                  {ratingSubmitting ? 'Submitting...' : 'Submit Rating'}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={closeRating}>
                   Cancel
                 </button>
               </div>
